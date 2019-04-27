@@ -1,0 +1,4 @@
+1,0,Curseball - Help,exit
+1,0,I just started making this so there are alot of bugs. Right now I am working on the menu system and learning different parts of ncurses,exit
+1,0,Soon I will have a LOT more,exit
+1,1,back,main_menu
