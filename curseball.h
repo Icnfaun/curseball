@@ -1,11 +1,12 @@
 typedef struct menu_node {
   struct menu_node *next;
   struct menu_node *prev;
+  int setting;
+  int selectable;
   char *link;
   char *content;
-  int color;
-  int selectable;
 }menu_n;
+
 
 void draw_menu(WINDOW *, struct menu_node *, int selected);
 void draw_scene(int, WINDOW *);

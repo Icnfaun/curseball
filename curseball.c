@@ -61,7 +61,7 @@ void display_menu (WINDOW *window ,char **filename_p) {
   int selected = menu_select_init(menu);
   draw_menu(window, menu, selected);
   int key = getch();
-  while (key != KEY_RIGHT) {
+  while (key != 10) {
     if (key == KEY_UP) {
       selected = menu_select(menu, selected, UP);
     }
@@ -85,7 +85,6 @@ menu_n *create_menu(char *filename) {
   menu_n *head = NULL;
   menu_n *traversal_node = NULL;
   char current_line[MAX_LINE_LEN];
-  int current_color = 0;
   int current_select = 0;
   int current_node = 0;
   while(fgets(current_line
@@ -95,10 +94,10 @@ menu_n *create_menu(char *filename) {
     if (current_node == 0) {
       traversal_node = malloc(sizeof(menu_n));
       sscanf(current_line, "%d,%d,%[^,],%[^\n]\n"
-             ,&traversal_node->color
-             ,&traversal_node->selectable
-             ,node_contents
-             ,node_link);
+             , &traversal_node->setting
+             , &traversal_node->selectable
+             , node_contents
+             , node_link);
       traversal_node->content 
         = malloc(sizeof(char) * (strlen(node_contents) + 1));
       traversal_node->link 
@@ -112,10 +111,10 @@ menu_n *create_menu(char *filename) {
     else {
       traversal_node->next = malloc(sizeof(menu_n)); 
       sscanf(current_line, "%d,%d,%[^,],%[^\n]\n"
-             ,&traversal_node->next->color
-             ,&traversal_node->next->selectable
-             ,node_contents
-             ,node_link);
+             , &traversal_node->next->setting
+             , &traversal_node->next->selectable
+             , node_contents
+             , node_link);
       traversal_node->next->content 
         = malloc(sizeof(char) * (strlen(node_contents) + 1));
       traversal_node->next->link 
@@ -163,7 +162,17 @@ void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
       if ((col - total_multilines) == (2 * selected) - 1) {
         wattron(game_w, COLOR_PAIR(2));
       }
-      mvwprintw(game_w, col, 1, current_segment);
+      mvwprintw(game_w, col, 1, current_segment); 
+      if ((i == num_segments - 1) 
+          && (traversal_node->setting == 1)) {
+        mvwprintw(game_w,col, strlen(current_segment) + 2, "< ");
+        mvwprintw(game_w, col
+            , strlen(current_segment) + 4
+            , traversal_node->link); 
+        mvwprintw(game_w,col
+            ,strlen(current_segment)
+            + strlen(traversal_node->link) + 4, " >");
+      } 
       if ((col - total_multilines) == (2 * selected) - 1) {
         wattroff(game_w, COLOR_PAIR(2));
       }
