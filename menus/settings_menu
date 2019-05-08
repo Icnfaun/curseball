@@ -1,4 +1,4 @@
-0,0,Curseball --- Settings,exit
-1,1,Window size:,50
-1,1,Sound:,Off
-0,1,back,main_menu
+0,0,Curseball --- Settings,1,exit
+1,1,Window size:,4,50 75 100 125
+1,1,Sound:,2,on off
+0,1,back,1,main_menu
