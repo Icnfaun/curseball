@@ -18,6 +18,15 @@
 #define DOWN  (1)
 #define MAX_LINE_LEN (1000)
 
+int window_size = 0;
+int wscreen_width = 0;
+int wscreen_height = 0;
+int difficulty = 0;
+int sound = 0;
+char **team_directories = NULL;
+int num_directories = 0;
+
+
 int main() {
   initscr();
   noecho();
@@ -25,14 +34,48 @@ int main() {
   init_pair(1, COLOR_RED, COLOR_BLACK);
   init_pair(2, COLOR_GREEN, COLOR_BLACK);
   keypad(stdscr, TRUE);
-  WINDOW *game_w = newwin(25, 50, 0, 0);
+  init_config("curse_config");
+  WINDOW *game_w = newwin(window_size/2, window_size, 0, 0);
   char *current_menu = malloc(sizeof(char) * 25);
   strcpy(current_menu, "menus/main_menu");
   while (strcmp(current_menu, "menus/exit") != 0) {
     display_menu(game_w, &current_menu);
   }
   free(current_menu);
+  free(team_directories);
   endwin();
+}
+
+void init_config(char * filename) {
+  FILE *config_file = fopen(filename, "r");
+  if (config_file == NULL) {
+    return;
+  }
+  char current_line[MAX_LINE_LEN];
+  while (fgets(current_line, MAX_LINE_LEN, config_file) != NULL) {
+    char current_setting[MAX_LINE_LEN];
+    if (sscanf(current_line, "%[^=]=", current_setting) == 1) {
+      if (strncmp("window_size", current_setting, 11) == 0) {
+        sscanf(current_line, "%*[^=]=%i", &window_size);
+        wscreen_width = window_size - 2;
+        wscreen_height = window_size/2 -2;
+      }
+      if (strncmp("difficulty", current_setting, 10) == 0) {
+        sscanf(current_line, "%*[^=]=%i", &difficulty);
+      }
+      if (strncmp("sound", current_setting, 5) == 0) {
+        sscanf(current_line, "%*[^=]=%i", &sound);
+      }
+      if (strncmp("new_dir", current_setting, 7) == 0) {
+        if (num_directories < 10) {
+          sscanf(current_line, "%*[^=]=%[^s]", (team_directories + num_directories));
+          num_directories++;
+        }
+      }
+    }
+  }
+  fclose(config_file);
+  config_file = NULL;
 }
 
 void display_menu (WINDOW *window ,char **filename_p) {
@@ -43,11 +86,12 @@ void display_menu (WINDOW *window ,char **filename_p) {
     return;
   }
   int selected = menu_select_init(menu);
+  int multilines = 0;
   int key = -1;
   while (key != 10) {
     werase(window);
     refresh();
-    draw_menu(window, menu, selected);
+    multilines = draw_menu(window, menu, (selected * 2) -1, multilines);
     key = getch();
     menu_n *current_node = get_selected(menu, selected);
     if (key == KEY_UP) {
@@ -64,7 +108,7 @@ void display_menu (WINDOW *window ,char **filename_p) {
     }
   }
   char new_menu[25] = "menus/"; 
-  strcpy(filename, strcat(new_menu, get_link(menu, selected)));
+  strcpy(filename, strcat(new_menu, get_selected(menu, selected)->link->link_c));
   free_menu(menu);
 }
 
@@ -198,31 +242,48 @@ void free_menu(menu_n *menu) {
   }
 }
 
-void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
+int draw_menu(WINDOW *game_w, menu_n *menu, int selected, int s_multilines) {
   menu_n *traversal_node = menu;
   int col = 1;
+  int offset = 0;
+  int scroll_col = 1;
   int total_multilines = 0;
+  int selected_multilines = 0;
+  if (selected + s_multilines > wscreen_height) {
+    col += wscreen_height - (selected + s_multilines);
+    offset -= wscreen_height - (selected + s_multilines);
+  }
   while (traversal_node != NULL) {
-    char *current_segment = malloc(sizeof(char) * 48);
-    int num_segments = strlen(traversal_node->content)/48;
-    if (strlen(traversal_node->content) % 48 != 0) {
+    char *current_segment = malloc(sizeof(char) * wscreen_width);
+    int num_segments = strlen(traversal_node->content)/wscreen_width;
+    if (strlen(traversal_node->content) % wscreen_width != 0) {
       num_segments += 1;
     }
     for (int i = 0; i < num_segments; i++) {
-      strncpy(current_segment, traversal_node->content + (i * 48), 48);
-      if ((col - total_multilines) == (2 * selected) - 1) {
+      strncpy(current_segment, traversal_node->content + (i * wscreen_width), wscreen_width);
+      if ((col - total_multilines + offset) == selected) {
         wattron(game_w, COLOR_PAIR(2));
       }
       mvwprintw(game_w, col, 1, current_segment); 
-      if ((i == num_segments - 1) 
-          && (traversal_node->setting == 1)) {
-        mvwprintw(game_w,col, strlen(current_segment) + 2, "< ");
-        mvwprintw(game_w, col, strlen(current_segment) + 4, traversal_node->link->link_c); 
-        mvwprintw(game_w,col
+      if ((i == num_segments - 1) && (traversal_node->setting == 1)) {
+        if ((strlen(current_segment) + 6 + strlen(traversal_node->link->link_c)
+              < wscreen_width)) {
+          mvwprintw(game_w, col, strlen(current_segment) + 2, "< ");
+          mvwprintw(game_w, col, strlen(current_segment) + 4, traversal_node->link->link_c); 
+          mvwprintw(game_w, col
                 , strlen(current_segment) + strlen(traversal_node->link->link_c) + 4, " >");
+        }
+        else {
+          col++;
+          total_multilines++;
+          mvwprintw(game_w, col, 1, "< " );
+          mvwprintw(game_w, col, 3, traversal_node->link->link_c);
+          mvwprintw(game_w, col, strlen(traversal_node->link->link_c) + 3, " >"); 
+        }
       } 
-      if ((col - total_multilines) == (2 * selected) - 1) {
+      if ((col - total_multilines + offset) == selected) {
         wattroff(game_w, COLOR_PAIR(2));
+        selected_multilines = total_multilines;
       }
       if (i != num_segments - 1) {
         col++;
@@ -236,9 +297,10 @@ void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
     current_segment = NULL;
     col += 2;
   }
-  move(((selected * 2) - 1) + total_multilines, 1);
+  move(selected + total_multilines - offset, 1);
   box(game_w, 0, 0);
   wrefresh(game_w);
+  return selected_multilines;
 }
 
 int menu_select_init(menu_n *menu) {
@@ -291,18 +353,4 @@ menu_n *get_selected(menu_n *menu, int selected) {
   }
   return NULL;
 }
-
-char *get_link(menu_n *menu, int selected) {
-  menu_n *traversal_node = menu;
-  int current_node = 1;
-  while (traversal_node != NULL) {
-    if (current_node == selected) {
-      return traversal_node->link->link_c;
-    }
-    traversal_node = traversal_node->next;
-    current_node++;
-  }
-  return menu->link->link_c;
-}
-
 

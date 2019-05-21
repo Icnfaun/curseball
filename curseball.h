@@ -13,11 +13,11 @@ typedef struct link_node {
   char *link_c;
 }link_n;
 
-void draw_menu(WINDOW *, struct menu_node *, int selected);
+int draw_menu(WINDOW *, struct menu_node *, int selected, int s_multilines);
 void free_menu(struct menu_node *);
 void display_menu(WINDOW *, char **);
+void init_config(char *);
 menu_n *create_menu(char *);
-char *get_link(struct menu_node *, int);
 menu_n *get_selected(struct menu_node *, int);
 int menu_select_init(struct menu_node *);
 int menu_select(struct menu_node *, int, int);

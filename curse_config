@@ -1,0 +1,18 @@
+Curseball Configuration File
+
+--Display Settings--
+
+window_size=35
+
+difficulty= 5
+
+sound= 1
+
+--Team Files--
+
+add directories for team files
+//
+/teams
+//
+
+
