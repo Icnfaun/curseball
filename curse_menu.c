@@ -1,3 +1,10 @@
+/*
+ * Curseball - Menu System
+ *
+ * Creator: Mason Snyder
+ * Version 0.0
+ */
+
 #include <ncurses.h>
 #include <unistd.h>
 #include <malloc.h>
@@ -10,6 +17,8 @@
 
 #define UP    (0)
 #define DOWN  (1)
+#define START (1)
+#define WHITESPACE (1)
 #define MAX_LINE_LEN (1000)
 
 void free_game() {
@@ -32,6 +41,7 @@ void init_libs() {
   initscr();
   noecho();
   start_color();
+  curs_set(0);
   init_pair(1, COLOR_RED, COLOR_BLACK);
   init_pair(2, COLOR_GREEN, COLOR_BLACK);
   keypad(stdscr, TRUE);
@@ -78,12 +88,11 @@ void display_menu (WINDOW *window ,char **filename_p) {
     return;
   }
   int selected = menu_select_init(menu);
-  int multilines = 0;
   int key = -1;
   while (key != 10) {
     werase(window);
     refresh();
-    multilines = draw_menu(window, menu, (selected * 2) -1, multilines);
+    draw_menu(window, menu, selected);
     key = getch();
     menu_n *current_node = get_selected(menu, selected);
     if (key == KEY_UP) {
@@ -111,6 +120,7 @@ menu_n *create_menu(char *filename) {
   }  
   menu_n *head = NULL;
   menu_n *traversal_node = NULL;
+  menu_n *previous_node = NULL;
   char current_line[MAX_LINE_LEN];
   int current_node = 0;
   while (fgets(current_line, sizeof(current_line), read_file) != NULL) {
@@ -118,92 +128,55 @@ menu_n *create_menu(char *filename) {
     int num_links = 0;
     int bytes_read = 0;
     int new_bytes = 0;
-    if (current_node == 0) {
-      traversal_node = malloc(sizeof(menu_n));
-      sscanf(current_line, "%d,%d,%[^,],%i,%n"
-             , &traversal_node->setting
-             , &traversal_node->selectable
-             , node_contents
-             , &num_links
-             , &bytes_read);
-      traversal_node->content = malloc(sizeof(char) * (strlen(node_contents) + 1));
-      char current_link[MAX_LINE_LEN];
-      link_n *previous_link = NULL;
-      for (int i = 0; i < num_links; i++) {
-        sscanf(current_line + bytes_read, "%s%*c%n", current_link, &new_bytes);
-        bytes_read += new_bytes;
-        traversal_node->link = malloc(sizeof(struct link_node));
-        traversal_node->link->link_c = malloc(sizeof(char) * (strlen(current_link) + 1));
-        strcpy(traversal_node->link->link_c, current_link);
-        traversal_node->link->next = NULL;
-        traversal_node->link->prev = previous_link;
-        if (previous_link != NULL) {
-          previous_link->next = traversal_node->link;
-        }
-        previous_link = traversal_node->link;
-        if (i != num_links - 1) {
-          traversal_node->link = traversal_node->link->next;
-        }
-      }
+    traversal_node = malloc(sizeof(menu_n));
+    sscanf(current_line, "%d,%d,%[^,],%i,%n"
+           , &traversal_node->setting
+           , &traversal_node->selectable
+           , node_contents
+           , &num_links
+           , &bytes_read);
+    traversal_node->content = malloc(sizeof(char) * (strlen(node_contents) + 1));
+    char current_link[MAX_LINE_LEN];
+    link_n *previous_link = NULL;
+    for (int i = 0; i < num_links; i++) {
+      sscanf(current_line + bytes_read, "%s%*c%n", current_link, &new_bytes);
+      bytes_read += new_bytes;
+      traversal_node->link = malloc(sizeof(struct link_node));
+      traversal_node->link->link_c = malloc(sizeof(char) * (strlen(current_link) + 1));
+      strcpy(traversal_node->link->link_c, current_link);
+      traversal_node->link->next = NULL;
+      traversal_node->link->prev = previous_link;
       if (previous_link != NULL) {
-        while (previous_link->prev != NULL) {
-          previous_link = previous_link->prev;
-        }
-        previous_link->prev = traversal_node->link;
-        traversal_node->link->next = previous_link;
+        previous_link->next = traversal_node->link;
       }
-      else {
-        traversal_node->link->next = traversal_node->link;
-        traversal_node->link->prev = traversal_node->link;
+      previous_link = traversal_node->link;
+      if (i != num_links - 1) {
+        traversal_node->link = traversal_node->link->next;
       }
-      strcpy(traversal_node->content, node_contents);
-      traversal_node->next = NULL;
-      traversal_node->prev = NULL;
-      head = traversal_node;
+    }
+    if (previous_link != NULL) {
+      while (previous_link->prev != NULL) {
+        previous_link = previous_link->prev;
+      }
+      previous_link->prev = traversal_node->link;
+      traversal_node->link->next = previous_link;
     }
     else {
-      traversal_node->next = malloc(sizeof(menu_n)); 
-      sscanf(current_line, "%d,%d,%[^,],%i,%n"
-             , &traversal_node->next->setting
-             , &traversal_node->next->selectable
-             , node_contents
-             , &num_links
-             , &bytes_read);
-      traversal_node->next->content = malloc(sizeof(char) * (strlen(node_contents) + 1));
-      strcpy(traversal_node->next->content, node_contents); 
-      char current_link[MAX_LINE_LEN];
-      link_n *previous_link = NULL;
-      for (int i = 0; i < num_links; i++) {
-        sscanf(current_line + bytes_read, "%s%*c%n", current_link, &new_bytes);
-        bytes_read += new_bytes;
-        traversal_node->next->link = malloc(sizeof(struct link_node));
-        traversal_node->next->link->link_c = malloc(sizeof(char) * strlen(current_link));
-        strcpy(traversal_node->next->link->link_c, current_link);
-        traversal_node->next->link->next = NULL;
-        traversal_node->next->link->prev = previous_link;
-        if (previous_link != NULL) {
-          previous_link->next = traversal_node->next->link;
-        }
-        previous_link = traversal_node->next->link;
-        if (i != (num_links - 1)) {
-          traversal_node->next->link = traversal_node->next->link->next;
-        }
-      }
-      if (previous_link != NULL) {
-        while (previous_link->prev != NULL) {
-          previous_link = previous_link->prev;
-        }
-        previous_link->prev = traversal_node->next->link;
-        traversal_node->next->link->next = previous_link;
-      }
-      else {
-        traversal_node->next->link->next = traversal_node->next->link;
-        traversal_node->next->link->prev = traversal_node->next->link;
-      }
-      traversal_node->next->next = NULL;
-      traversal_node->next->prev = traversal_node;
-      traversal_node = traversal_node->next;
+      traversal_node->link->next = traversal_node->link;
+      traversal_node->link->prev = traversal_node->link;
     }
+    strcpy(traversal_node->content, node_contents);
+    if (current_node != 0) {
+      previous_node->next = traversal_node;
+      traversal_node->prev = previous_node;
+    }
+    else {
+      head = traversal_node;
+      traversal_node->prev = NULL;
+    }
+    traversal_node->next = NULL;
+    previous_node = traversal_node;
+    traversal_node += 1;
     current_node++;
   }
   fclose(read_file);
@@ -235,65 +208,64 @@ void free_menu(menu_n *menu) {
   }
 }
 
-int draw_menu(WINDOW *game_w, menu_n *menu, int selected, int s_multilines) {
+int draw_lines(char *node_contents, int col, WINDOW *game_w) {
+  int extra_cols = 0;
+  int current_line = START;
+  char *current_word = malloc(sizeof(char) * wscreen_width);
+  int total_chars_read = 0;
+  int cur_chars_read = 0;
+  while (total_chars_read < strlen(node_contents)) {
+    sscanf(node_contents + total_chars_read , "%s%n", current_word, &cur_chars_read);
+    if ((strlen(current_word) + current_line) > wscreen_width) {
+      current_line = START;
+      extra_cols++;
+      col++;
+    }
+    total_chars_read += cur_chars_read;
+    mvwprintw(game_w, col, current_line, current_word);
+    current_line += strlen(current_word) + WHITESPACE;
+  }
+  return extra_cols;
+}
+
+int draw_option(menu_n *node, int col, WINDOW *game_w) {
+  char full_line[MAX_LINE_LEN];
+  strcpy(full_line, node->content);
+  strcat(full_line, " <");
+  strcat(full_line, node->link->link_c);
+  strcat(full_line, ">");
+  return draw_lines(full_line, col, game_w);
+}
+
+
+void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
   menu_n *traversal_node = menu;
   int col = 1;
   int offset = 0;
-  int scroll_col = 1;
   int total_multilines = 0;
-  int selected_multilines = 0;
-  if (selected + s_multilines > wscreen_height) {
-    col += wscreen_height - (selected + s_multilines);
-    offset -= wscreen_height - (selected + s_multilines);
-  }
+  int current_multilines = 0;
+  int current_node = 1;
   while (traversal_node != NULL) {
-    char *current_segment = malloc(sizeof(char) * wscreen_width);
-    int num_segments = strlen(traversal_node->content)/wscreen_width;
-    if (strlen(traversal_node->content) % wscreen_width != 0) {
-      num_segments += 1;
+    if (current_node == selected) {
+      wattron(game_w, COLOR_PAIR(2));
     }
-    for (int i = 0; i < num_segments; i++) {
-      strncpy(current_segment, traversal_node->content + (i * wscreen_width), wscreen_width);
-      if ((col - total_multilines + offset) == selected) {
-        wattron(game_w, COLOR_PAIR(2));
-      }
-      mvwprintw(game_w, col, 1, current_segment); 
-      if ((i == num_segments - 1) && (traversal_node->setting == 1)) {
-        if ((strlen(current_segment) + 6 + strlen(traversal_node->link->link_c)
-              < wscreen_width)) {
-          mvwprintw(game_w, col, strlen(current_segment) + 2, "< ");
-          mvwprintw(game_w, col, strlen(current_segment) + 4, traversal_node->link->link_c); 
-          mvwprintw(game_w, col
-                , strlen(current_segment) + strlen(traversal_node->link->link_c) + 4, " >");
-        }
-        else {
-          col++;
-          total_multilines++;
-          mvwprintw(game_w, col, 1, "< " );
-          mvwprintw(game_w, col, 3, traversal_node->link->link_c);
-          mvwprintw(game_w, col, strlen(traversal_node->link->link_c) + 3, " >"); 
-        }
-      } 
-      if ((col - total_multilines + offset) == selected) {
-        wattroff(game_w, COLOR_PAIR(2));
-        selected_multilines = total_multilines;
-      }
-      if (i != num_segments - 1) {
-        col++;
-      }
-      if (i > 0) {
-        total_multilines++;
-      }
+    if (traversal_node->setting == 1) {
+      current_multilines = draw_option(traversal_node, col, game_w);
     }
+    else {
+      current_multilines = draw_lines(traversal_node->content, col, game_w);
+    }
+    if (current_node == selected) {
+      wattroff(game_w, COLOR_PAIR(2));
+    }
+    total_multilines += current_multilines;
+    col += current_multilines;
     traversal_node = traversal_node->next;
-    free(current_segment);
-    current_segment = NULL;
+    current_node++;
     col += 2;
   }
-  move(selected + total_multilines - offset, 1);
   box(game_w, 0, 0);
   wrefresh(game_w);
-  return selected_multilines;
 }
 
 int menu_select_init(menu_n *menu) {

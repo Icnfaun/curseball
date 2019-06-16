@@ -25,7 +25,7 @@ typedef struct link_node {
 void free_game();
 void menu();
 void init_libs();
-int draw_menu(WINDOW *, struct menu_node *, int selected, int s_multilines);
+void draw_menu(WINDOW *, struct menu_node *, int selected);
 void free_menu(struct menu_node *);
 void display_menu(WINDOW *, char **);
 void init_config(char *);
