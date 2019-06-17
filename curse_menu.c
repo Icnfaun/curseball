@@ -130,11 +130,21 @@ menu_n *create_menu(char *filename) {
     int new_bytes = 0;
     traversal_node = malloc(sizeof(menu_n));
     sscanf(current_line, "%d,%d,%[^,],%i,%n"
-           , &traversal_node->setting
+           , &traversal_node->type
            , &traversal_node->selectable
            , node_contents
            , &num_links
            , &bytes_read);
+    switch(traversal_node->type) {
+      case 1:
+        traversal_node->draw_function = &draw_plain_text;
+        break;
+      case 2:
+        traversal_node->draw_function = &draw_option;
+        break;
+      case 3:
+        break;
+    }
     traversal_node->content = malloc(sizeof(char) * (strlen(node_contents) + 1));
     char current_link[MAX_LINE_LEN];
     link_n *previous_link = NULL;
@@ -227,6 +237,9 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
   }
   return extra_cols;
 }
+int draw_plain_text(menu_n *node, int col, WINDOW *game_w) {
+  return draw_lines(node->content, col, game_w);
+}
 
 int draw_option(menu_n *node, int col, WINDOW *game_w) {
   char full_line[MAX_LINE_LEN];
@@ -249,12 +262,7 @@ void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
     if (current_node == selected) {
       wattron(game_w, COLOR_PAIR(2));
     }
-    if (traversal_node->setting == 1) {
-      current_multilines = draw_option(traversal_node, col, game_w);
-    }
-    else {
-      current_multilines = draw_lines(traversal_node->content, col, game_w);
-    }
+    current_multilines = traversal_node->draw_function(traversal_node, col, game_w);
     if (current_node == selected) {
       wattroff(game_w, COLOR_PAIR(2));
     }
