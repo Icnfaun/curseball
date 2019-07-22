@@ -260,6 +260,10 @@ void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
   int current_node = 1;
   while (traversal_node != NULL) {
     if (current_node == selected) {
+      if (col > wscreen_height + 1) {
+        werase(game_w);
+        col = 1;
+      }
       wattron(game_w, COLOR_PAIR(2));
     }
     current_multilines = traversal_node->draw_function(traversal_node, col, game_w);
