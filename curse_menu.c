@@ -10,6 +10,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "curseball.h"
 #include "curse_sound.h"
@@ -21,6 +22,8 @@
 #define WHITESPACE (1)
 #define MAX_LINE_LEN (1000)
 
+int settings[3];
+
 void free_game() {
   free(team_directories);
   sdl_shutdown();
@@ -28,7 +31,7 @@ void free_game() {
 }
 
 void menu() {
-  game_w = newwin(window_size/2, window_size, 0, 0);
+  game_w = newwin(settings[0]/2, settings[0], 0, 0);
   char *current_menu = malloc(sizeof(char) * 25);
   strcpy(current_menu, "menus/main_menu");
   while (strcmp(current_menu, "menus/exit") != 0) {
@@ -58,15 +61,15 @@ void init_config(char * filename) {
     char current_setting[MAX_LINE_LEN];
     if (sscanf(current_line, "%[^=]=", current_setting) == 1) {
       if (strncmp("window_size", current_setting, 11) == 0) {
-        sscanf(current_line, "%*[^=]=%i", &window_size);
-        wscreen_width = window_size - 2;
-        wscreen_height = window_size/2 -2;
+        sscanf(current_line, "%*[^=]=%i", &settings[0]);
+        wscreen_width = settings[0] - 2;
+        wscreen_height = settings[0]/2 -2;
       }
       if (strncmp("difficulty", current_setting, 10) == 0) {
-        sscanf(current_line, "%*[^=]=%i", &difficulty);
+        sscanf(current_line, "%*[^=]=%i", &settings[2]);
       }
       if (strncmp("sound", current_setting, 5) == 0) {
-        sscanf(current_line, "%*[^=]=%i", &sound);
+        sscanf(current_line, "%*[^=]=%i", &settings[1]);
       }
       if (strncmp("new_dir", current_setting, 7) == 0) {
         if (num_directories < 10) {
@@ -80,7 +83,7 @@ void init_config(char * filename) {
   config_file = NULL;
 }
 
-void display_menu (WINDOW *window ,char **filename_p) {
+void display_menu (WINDOW *window , char **filename_p) {
   char *filename = (*filename_p);
   menu_n *menu = create_menu(filename);
   if (menu == NULL) {
@@ -89,12 +92,13 @@ void display_menu (WINDOW *window ,char **filename_p) {
   }
   int selected = menu_select_init(menu);
   int key = -1;
-  while (key != 10) {
+  menu_n *current_node = NULL;
+  while ((key != 10) || (get_selected(menu, selected)->type != 1)) {
     werase(window);
     refresh();
     draw_menu(window, menu, selected);
     key = getch();
-    menu_n *current_node = get_selected(menu, selected);
+    current_node = get_selected(menu, selected);
     if (key == KEY_UP) {
       selected = menu_select(menu, selected, UP);
     }
@@ -106,6 +110,12 @@ void display_menu (WINDOW *window ,char **filename_p) {
     }
     if (key == KEY_LEFT) {
       current_node->link = current_node->link->prev;
+    }
+    if ((key == 10) && (current_node->type == 2)) {
+      current_node->select_function(setting_finder(current_node->content), atoi(current_node->link->link_c));
+      free_menu(menu);
+      clear();
+      return;
     }
   }
   char new_menu[25] = "menus/"; 
@@ -138,9 +148,11 @@ menu_n *create_menu(char *filename) {
     switch(traversal_node->type) {
       case 1:
         traversal_node->draw_function = &draw_plain_text;
+        traversal_node->select_function = NULL;
         break;
       case 2:
         traversal_node->draw_function = &draw_option;
+        traversal_node->select_function = &option_select;
         break;
       case 3:
         break;
@@ -332,3 +344,31 @@ menu_n *get_selected(menu_n *menu, int selected) {
   return NULL;
 }
 
+void option_select(int option, int new_value) {
+  settings[option] = new_value;
+  refresh_window_size();
+  return;
+
+}
+
+int setting_finder(char *setting) {
+  //For sake of not cluttering menu files, just put your options in here and strcmp
+  //Settings are in an array of ints, this function returns the correct int for the setting
+  //look in curse_menu.h for defines
+  if (strcmp(setting, "Sound:") == 0) {
+    return SOUND;
+  }
+  if (strcmp(setting, "Window size:") == 0) {
+    return WINDOW_SIZE;
+  }
+  if (strcmp(setting, "Difficulty:") == 0) {
+    return DIFFICULTY;
+  }
+  return -1;
+}
+
+void refresh_window_size() {
+  game_w = newwin(settings[0]/2, settings[0], 0, 0);
+  wscreen_height = settings[0]/2 - 2;
+  wscreen_width = settings[0] - 2;
+}

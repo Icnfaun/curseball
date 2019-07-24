@@ -1,11 +1,13 @@
-extern int window_size;
-extern int sound;
-extern int difficulty;
 extern int wscreen_width;
 extern int wscreen_height;
 extern int num_directories;
 extern char **team_directories;
 extern WINDOW *game_w;
+extern int settings[3];
+
+#define WINDOW_SIZE (0)
+#define SOUND (1)
+#define DIFFICULTY (2)
 
 
 /*
@@ -18,7 +20,7 @@ typedef struct menu_node {
   struct menu_node *next;
   struct menu_node *prev;
   int (*draw_function)(struct menu_node *, int, WINDOW *);
-  int (*select_function)();
+  void (*select_function)(int, int);
   int type;
   int selectable;
   struct link_node *link;
@@ -45,4 +47,7 @@ menu_n *create_menu(char *);
 menu_n *get_selected(struct menu_node *, int);
 int menu_select_init(struct menu_node *);
 int menu_select(struct menu_node *, int, int);
+void option_select(int, int);
+int setting_finder(char *);
+void refresh_window_size();
 
