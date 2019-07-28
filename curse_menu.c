@@ -22,14 +22,21 @@
 #define WHITESPACE (1)
 #define MAX_LINE_LEN (1000)
 
-int settings[3];
-
+/*
+ * Unallocates all allocated space taken by team files, sdl, and ncurses
+ */
 void free_game() {
   free(team_directories);
   sdl_shutdown();
   endwin();
-}
+} /* free_game() */
 
+/*
+ * Main function for creating and maintaining menus. initializes window size,
+ * starts up first menu (to be changed to be more modular), and draws menus
+ * that are selected until "menus/exit" is the next menu to be called. Then it
+ * calls closing and freeing functions.
+ */
 void menu() {
   game_w = newwin(settings[0]/2, settings[0], 0, 0);
   char *current_menu = malloc(sizeof(char) * 25);
@@ -38,8 +45,12 @@ void menu() {
     display_menu(game_w, &current_menu);
   }
   free(current_menu);
-}
+} /* menu() */
 
+/*
+ * This function initializes ncurses and sdl so certain settings like
+ * color and hiding the cursor work.
+ */
 void init_libs() {
   initscr();
   noecho();
@@ -49,8 +60,15 @@ void init_libs() {
   init_pair(2, COLOR_GREEN, COLOR_BLACK);
   keypad(stdscr, TRUE);
   sdl_startup();
-}
+} /* init_libs() */
 
+/*
+ * This function takes in a filename (by default the file "curse_config" is used)
+ * and uses tags to initialize settings. For example the file will be read up to "="
+ * and the word before "=" will be parsed and set to whatever is after "="
+ *
+ * Format: Setting=Value
+ */
 void init_config(char * filename) {
   FILE *config_file = fopen(filename, "r");
   if (config_file == NULL) {
@@ -81,8 +99,11 @@ void init_config(char * filename) {
   }
   fclose(config_file);
   config_file = NULL;
-}
+} /* init_config() */
 
+/*
+ * This function displays a menu file onto an ncurses window, and also parses keypresses
+ */
 void display_menu (WINDOW *window , char **filename_p) {
   char *filename = (*filename_p);
   menu_n *menu = create_menu(filename);
@@ -121,8 +142,12 @@ void display_menu (WINDOW *window , char **filename_p) {
   char new_menu[25] = "menus/"; 
   strcpy(filename, strcat(new_menu, get_selected(menu, selected)->link->link_c));
   free_menu(menu);
-}
+} /* display_menu() */
 
+/*
+ * This function takes in a filename for a menu file and creates an allocated doubly linked list
+ * (that can be seen in the header file) for easy displaying and use in other functions
+ */
 menu_n *create_menu(char *filename) {
   FILE *read_file = fopen(filename, "r");
   if (read_file == NULL) {
@@ -203,8 +228,11 @@ menu_n *create_menu(char *filename) {
   }
   fclose(read_file);
   return head;
-}
+} /* create_menu() */
 
+/*
+ * This function frees allocated menu nodes, although I have not thoroughly tested this.
+ */
 void free_menu(menu_n *menu) {
   execute_sfx("menu_select.wav");
   menu_n *traversal_node = menu;
@@ -228,8 +256,12 @@ void free_menu(menu_n *menu) {
     menu->prev = NULL;
     menu = traversal_node;
   }
-}
+} /* free_menu() */
 
+/*
+ * This function draws contents of menu files to the window specified
+ * it returns the number of lines that it took to write the contents
+ */
 int draw_lines(char *node_contents, int col, WINDOW *game_w) {
   int extra_cols = 0;
   int current_line = START;
@@ -248,11 +280,19 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
     current_line += strlen(current_word) + WHITESPACE;
   }
   return extra_cols;
-}
+} /* draw_lines() */
+
+/*
+ * This function is the "draw_function" of plain text menu nodes
+ * This includes selectable links and just text.
+ */
 int draw_plain_text(menu_n *node, int col, WINDOW *game_w) {
   return draw_lines(node->content, col, game_w);
-}
+} /* draw_plain_text() */
 
+/*
+ * This function is the "draw_function" for options/settings that can be adjusted.
+ */
 int draw_option(menu_n *node, int col, WINDOW *game_w) {
   char full_line[MAX_LINE_LEN];
   strcpy(full_line, node->content);
@@ -260,9 +300,12 @@ int draw_option(menu_n *node, int col, WINDOW *game_w) {
   strcat(full_line, node->link->link_c);
   strcat(full_line, ">");
   return draw_lines(full_line, col, game_w);
-}
+} /* draw_option() */
 
-
+/*
+ * This function goes through each node in a menu list and draws it to the
+ * given window, it also highlights the current selected node
+ */
 void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
   menu_n *traversal_node = menu;
   int col = 1;
@@ -290,8 +333,11 @@ void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
   }
   box(game_w, 0, 0);
   wrefresh(game_w);
-}
+} /* draw_menu() */
 
+/*
+ * finds the first selectable node and returns how many nodes in it is.
+ */
 int menu_select_init(menu_n *menu) {
   menu_n *traversal_node = menu;
   int current_node = 1;
@@ -300,8 +346,12 @@ int menu_select_init(menu_n *menu) {
     current_node++;
   }
   return current_node;
-}
+} /* menu_select_init() */
 
+/*
+ * Takes in a selected direction from a specified node, and finds/returns
+ * the first available selectable node.
+ */
 int menu_select(menu_n *menu, int selected_node, int direction) {
   execute_sfx("menu_beep.aiff");
   menu_n *traversal_node = menu;
@@ -329,8 +379,11 @@ int menu_select(menu_n *menu, int selected_node, int direction) {
     }
   }
   return selected_node;
-}
+} /* menu_select() */
 
+/*
+ * Returns the menu node that is currently selected.
+ */
 menu_n *get_selected(menu_n *menu, int selected) {
   menu_n *traversal_node = menu;
   int current_node = 1;
@@ -342,15 +395,22 @@ menu_n *get_selected(menu_n *menu, int selected) {
     current_node++;
   }
   return NULL;
-}
+} /* get_selected() */
 
+/*
+ * changes a selected setting to a specified value
+ */
 void option_select(int option, int new_value) {
   settings[option] = new_value;
   refresh_window_size();
   return;
 
-}
+} /* option_select() */
 
+/*
+ * Really stupid way to handle settings, parses setting name and matches it to
+ * actual setting.
+ */
 int setting_finder(char *setting) {
   //For sake of not cluttering menu files, just put your options in here and strcmp
   //Settings are in an array of ints, this function returns the correct int for the setting
@@ -365,10 +425,13 @@ int setting_finder(char *setting) {
     return DIFFICULTY;
   }
   return -1;
-}
+} /* setting_finder() */
 
+/*
+ * adjusts game window when selecting window size setting
+ */
 void refresh_window_size() {
   game_w = newwin(settings[0]/2, settings[0], 0, 0);
   wscreen_height = settings[0]/2 - 2;
   wscreen_width = settings[0] - 2;
-}
+} /* refresh_window_size() */

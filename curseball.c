@@ -11,11 +11,9 @@
 #include "curse_sound.h"
 #include "curse_menu.h"
 
-int window_size = 0;
+int settings[3];
 int wscreen_width = 0;
 int wscreen_height = 0;
-int difficulty = 0;
-int sound = 0;
 char **team_directories = NULL;
 int num_directories = 0;
 WINDOW *game_w = NULL;
