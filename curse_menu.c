@@ -234,7 +234,7 @@ menu_n *create_menu(char *filename) {
  * This function frees allocated menu nodes, although I have not thoroughly tested this.
  */
 void free_menu(menu_n *menu) {
-  execute_sfx("menu_select.wav");
+  execute_sfx("resources/menu_select.wav");
   menu_n *traversal_node = menu;
   while (menu != NULL) {
     traversal_node = menu->next;
@@ -353,7 +353,7 @@ int menu_select_init(menu_n *menu) {
  * the first available selectable node.
  */
 int menu_select(menu_n *menu, int selected_node, int direction) {
-  execute_sfx("menu_beep.aiff");
+  execute_sfx("resources/menu_beep.aiff");
   menu_n *traversal_node = menu;
   int current_node = 1;
   while (current_node != selected_node) {

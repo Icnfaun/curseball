@@ -1,0 +1,11 @@
+void choose_mode();
+void make_menu();
+void edit_menu();
+char *get_valid_input(char *, bool, bool, bool, int);
+bool valid_input(char *, bool, bool, bool);
+int yes_or_no(char *);
+int lines_in_file(FILE *);
+void print_contents(FILE *);
+void write_node(FILE *);
+void rewrite_menu(FILE *, int, char *);
+int get_valid_number(char *, int, int);

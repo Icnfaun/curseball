@@ -69,7 +69,7 @@ void change_current_name(char *new_name) {
     free(current_sfx_name);
     current_sfx_name = NULL;
   }
-  current_sfx_name = malloc(strlen(new_name) * sizeof(char));
+  current_sfx_name = malloc((strlen(new_name) + 1) * sizeof(char));
   strcpy(current_sfx_name, new_name);
 } /* change_current_name() */
 
