@@ -2,11 +2,13 @@ Curseball Configuration File
 
 --Display Settings--
 
-window_size=35
+start_menu=menus/main_menu
+
+window_size=50
 
 difficulty= 5
 
-sound= 1
+sound= 0
 
 --Team Files--
 

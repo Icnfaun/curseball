@@ -1,0 +1,6 @@
+1,0,Curseball Player Import,1,exit
+3,1,First Name:,1,Dave
+3,1,Last Name:,1,Kingman
+4,1,Search,1,exit
+1,0,------,1,exit
+1,1,back,1,team_maker_menu

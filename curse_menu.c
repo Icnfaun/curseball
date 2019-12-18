@@ -15,12 +15,16 @@
 #include "curseball.h"
 #include "curse_sound.h"
 #include "curse_menu.h"
+#include "curse_player_control.h"
 
 #define UP    (0)
 #define DOWN  (1)
 #define START (1)
 #define WHITESPACE (1)
 #define MAX_LINE_LEN (1000)
+
+menu_n *current_menu_g = NULL;
+bool menu_changed_g = false;
 
 /*
  * Unallocates all allocated space taken by team files, sdl, and ncurses
@@ -39,12 +43,11 @@ void free_game() {
  */
 void menu() {
   game_w = newwin(settings[0]/2, settings[0], 0, 0);
-  char *current_menu = malloc(sizeof(char) * 25);
-  strcpy(current_menu, "menus/main_menu");
-  while (strcmp(current_menu, "menus/exit") != 0) {
-    display_menu(game_w, &current_menu);
+  current_menu_g = create_menu("main_menu");
+  while (current_menu_g != NULL) {
+    display_menu(game_w);
   }
-  free(current_menu);
+  free(current_menu_g);
 } /* menu() */
 
 /*
@@ -95,6 +98,11 @@ void init_config(char * filename) {
           num_directories++;
         }
       }
+      if (strncmp("start_menu", current_setting, 10) == 0) {
+          start_menu = malloc(sizeof(char) * 25);
+          sscanf(current_line, "%*[^=]=%[^\n]", start_menu);
+          printf("%s", start_menu);
+      }
     }
   }
   fclose(config_file);
@@ -104,27 +112,24 @@ void init_config(char * filename) {
 /*
  * This function displays a menu file onto an ncurses window, and also parses keypresses
  */
-void display_menu (WINDOW *window , char **filename_p) {
-  char *filename = (*filename_p);
-  menu_n *menu = create_menu(filename);
-  if (menu == NULL) {
-    strcpy((*filename_p), "menus/exit");
-    return;
-  }
-  int selected = menu_select_init(menu);
+void display_menu (WINDOW *window) {
+  menu_changed_g = false;
+  int selected = menu_select_init(current_menu_g);
   int key = -1;
-  menu_n *current_node = NULL;
-  while ((key != 10) || (get_selected(menu, selected)->type != 1)) {
+  while (!menu_changed_g) {
     werase(window);
     refresh();
-    draw_menu(window, menu, selected);
+    draw_menu(window, current_menu_g, selected);
     key = getch();
-    current_node = get_selected(menu, selected);
+    menu_n *current_node = get_selected(current_menu_g, selected);
+    if (current_node->type == 3 && ((key > 31 && key < 127) || key == 263)) {
+      edit_link(current_node, key);
+    }
     if (key == KEY_UP) {
-      selected = menu_select(menu, selected, UP);
+      selected = menu_select(current_menu_g, selected, UP);
     }
     if (key == KEY_DOWN) {
-      selected = menu_select(menu, selected, DOWN);
+      selected = menu_select(current_menu_g, selected, DOWN);
     }
     if (key == KEY_RIGHT) {
       current_node->link = current_node->link->next;
@@ -132,16 +137,13 @@ void display_menu (WINDOW *window , char **filename_p) {
     if (key == KEY_LEFT) {
       current_node->link = current_node->link->prev;
     }
-    if ((key == 10) && (current_node->type == 2)) {
-      current_node->select_function(setting_finder(current_node->content), atoi(current_node->link->link_c));
-      free_menu(menu);
+    if (key == 10) {
+      current_node->select_function(current_node);
       clear();
       return;
     }
   }
-  char new_menu[25] = "menus/"; 
-  strcpy(filename, strcat(new_menu, get_selected(menu, selected)->link->link_c));
-  free_menu(menu);
+  free_menu(current_menu_g);
 } /* display_menu() */
 
 /*
@@ -149,7 +151,9 @@ void display_menu (WINDOW *window , char **filename_p) {
  * (that can be seen in the header file) for easy displaying and use in other functions
  */
 menu_n *create_menu(char *filename) {
-  FILE *read_file = fopen(filename, "r");
+  char full_path[25] = "menus/";
+  strcat(full_path, filename);
+  FILE *read_file = fopen(full_path, "r");
   if (read_file == NULL) {
     return NULL;
   }  
@@ -173,13 +177,19 @@ menu_n *create_menu(char *filename) {
     switch(traversal_node->type) {
       case 1:
         traversal_node->draw_function = &draw_plain_text;
-        traversal_node->select_function = NULL;
+        traversal_node->select_function = &change_menu;
         break;
       case 2:
         traversal_node->draw_function = &draw_option;
         traversal_node->select_function = &option_select;
         break;
       case 3:
+        traversal_node->draw_function = &draw_search_box;
+        traversal_node->select_function = NULL;
+        break;
+      case 4:
+        traversal_node->draw_function = &draw_plain_text;
+        traversal_node->select_function = &search_player;
         break;
     }
     traversal_node->content = malloc(sizeof(char) * (strlen(node_contents) + 1));
@@ -258,6 +268,32 @@ void free_menu(menu_n *menu) {
   }
 } /* free_menu() */
 
+void free_menu_node(menu_n *menu) {
+  free(menu->content);
+  menu->content = NULL;
+  menu_n *traversal_link = menu;
+  while (traversal_link->link != NULL) {
+    free(traversal_link->link->link_c);
+    if ((traversal_link->link->next == menu->link) || (traversal_link->link->next = NULL)) {
+      free(traversal_link->link);
+      traversal_link->link->next = NULL;
+      traversal_link->link->prev = NULL;
+      traversal_link->link = NULL;
+    }
+    else {
+      traversal_link->link = traversal_link->link->next;
+      free(traversal_link->link->prev);
+      traversal_link->link->prev->next = NULL;
+      traversal_link->link->prev->prev = NULL;
+    }
+    
+  }
+  free(menu);
+  menu->next = NULL;
+  menu->prev = NULL;
+
+}
+
 /*
  * This function draws contents of menu files to the window specified
  * it returns the number of lines that it took to write the contents
@@ -265,11 +301,20 @@ void free_menu(menu_n *menu) {
 int draw_lines(char *node_contents, int col, WINDOW *game_w) {
   int extra_cols = 0;
   int current_line = START;
-  char *current_word = malloc(sizeof(char) * wscreen_width);
+  char *current_word = malloc(sizeof(char) * (strlen(node_contents) + 1));
   int total_chars_read = 0;
   int cur_chars_read = 0;
   while (total_chars_read < strlen(node_contents)) {
-    sscanf(node_contents + total_chars_read , "%s%n", current_word, &cur_chars_read);
+    sscanf(node_contents + total_chars_read , "%1000s %n", current_word, &cur_chars_read);
+    while (strlen(current_word) >= wscreen_width) {
+      char current_chunk[MAX_LINE_LEN] = "";
+      strncpy(current_chunk, current_word, wscreen_width - current_line);
+      mvwprintw(game_w, col, current_line, current_chunk); 
+      current_line = START;
+      extra_cols++;
+      col++;
+      current_word = current_word + strlen(current_chunk);   
+    }
     if ((strlen(current_word) + current_line) > wscreen_width) {
       current_line = START;
       extra_cols++;
@@ -283,6 +328,20 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
 } /* draw_lines() */
 
 /*
+ * This function is the "draw function" of search box menu nodes, think of these draw functions
+ * more of a format to print with draw_lines()
+ */
+int draw_search_box(menu_n *node, int col, WINDOW *game_w) {
+  char full_line[MAX_LINE_LEN] = "";
+  strcat(full_line, node->content);
+  if (node->link->link_c != NULL) {
+    strcat(full_line, " ");
+    strcat(full_line, node->link->link_c);
+  }
+  return draw_lines(full_line, col, game_w);
+}
+
+/*
  * This function is the "draw_function" of plain text menu nodes
  * This includes selectable links and just text.
  */
@@ -294,7 +353,7 @@ int draw_plain_text(menu_n *node, int col, WINDOW *game_w) {
  * This function is the "draw_function" for options/settings that can be adjusted.
  */
 int draw_option(menu_n *node, int col, WINDOW *game_w) {
-  char full_line[MAX_LINE_LEN];
+  char full_line[MAX_LINE_LEN] = "";
   strcpy(full_line, node->content);
   strcat(full_line, " <");
   strcat(full_line, node->link->link_c);
@@ -330,6 +389,9 @@ void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
     traversal_node = traversal_node->next;
     current_node++;
     col += 2;
+    if (menu->type == 6) {
+      col --;
+    }
   }
   box(game_w, 0, 0);
   wrefresh(game_w);
@@ -400,8 +462,10 @@ menu_n *get_selected(menu_n *menu, int selected) {
 /*
  * changes a selected setting to a specified value
  */
-void option_select(int option, int new_value) {
-  settings[option] = new_value;
+void option_select(menu_n *current_node) {
+  int option_to_change = setting_finder(current_node->content);
+  int new_value = atoi(current_node->link->link_c);
+  settings[option_to_change] = new_value;
   refresh_window_size();
   return;
 
@@ -428,6 +492,34 @@ int setting_finder(char *setting) {
 } /* setting_finder() */
 
 /*
+ * This edits a seach box's contents based on what you type, not sure if deletion works
+ * on different computers yet, might be funky
+ */
+void edit_link(menu_n *current_node, char typed) {
+  char typed_contents[MAX_LINE_LEN] = "";
+  int string_length = 0;
+  if (current_node->link->link_c != NULL) {
+    string_length = strlen(current_node->link->link_c);
+    strcpy(typed_contents, current_node->link->link_c);
+    free(current_node->link->link_c);
+    if (typed == 7) {
+      typed_contents[string_length - 1] = '\0';
+    }
+  }
+  if (typed != 7) {
+    typed_contents[string_length] = typed;
+    string_length++;
+  }
+  if (strlen(typed_contents) > 0) {
+    current_node->link->link_c = malloc(sizeof(char) * (string_length + 1));
+    strcpy(current_node->link->link_c, typed_contents);
+  }
+  else {
+    current_node->link->link_c = NULL;
+  }
+}/*  edit_link() */
+
+/*
  * adjusts game window when selecting window size setting
  */
 void refresh_window_size() {
@@ -435,3 +527,11 @@ void refresh_window_size() {
   wscreen_height = settings[0]/2 - 2;
   wscreen_width = settings[0] - 2;
 } /* refresh_window_size() */
+
+/*
+ * changes the active menu
+ */
+void change_menu(menu_n *old_menu) {
+  current_menu_g = create_menu(old_menu->link->link_c);
+  menu_changed_g = true;
+} /* change_menu() */
