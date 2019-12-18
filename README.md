@@ -10,3 +10,5 @@ player/team data. Main focus being easy and understandable importing of data.
 3.) Develop base game starting with player inputted gameplay, and working up to pitcher and batter ai.
 
 4.) Make it pretty.
+
+All player data is from http://www.seanlahman.com/baseball-archive/statistics/
