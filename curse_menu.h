@@ -18,7 +18,7 @@ extern char *start_menu;
  * 3 search box
  * 4 player search execute
  * 5 menu interrupt (going to a menu not crated by a file)
- * 6 stats (with offset)
+ * 6 stats (with adjustable offset offset)
  */
 typedef struct menu_node {
   struct menu_node *next;
@@ -27,6 +27,7 @@ typedef struct menu_node {
   void (*select_function)(struct menu_node *);
   int type;
   int selectable;
+  int spaces_after;
   struct link_node *link;
   char *content;
 }menu_n;
@@ -44,6 +45,7 @@ void draw_menu(WINDOW *, struct menu_node *, int selected);
 int draw_lines(char *, int, WINDOW *);
 int draw_search_box(menu_n *, int, WINDOW *);
 int draw_option(menu_n *, int, WINDOW *);
+int draw_stats(menu_n *, int, WINDOW *);
 int draw_plain_text(menu_n *, int, WINDOW *);
 void free_menu(struct menu_node *);
 void free_menu_node(struct menu_node *);

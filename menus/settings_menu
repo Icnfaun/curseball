@@ -1,5 +1,5 @@
-1,0,Curseball --- Settings,1,exit
-2,1,Window size:,4,50 75 100 125
-2,1,Sound:,2,1 0
-2,1,Difficulty:,4,25 50 75 100
-1,1,back,1,main_menu
+1,0,2,Curseball --- Settings,1,exit
+2,1,1,Window size:,4,50 75 100 125
+2,1,1,Sound:,2,1 0
+2,1,1,Difficulty:,4,25 50 75 100
+1,1,1,back,1,main_menu

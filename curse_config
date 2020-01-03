@@ -4,7 +4,7 @@ Curseball Configuration File
 
 start_menu=menus/main_menu
 
-window_size=50
+window_size=75
 
 difficulty= 5
 

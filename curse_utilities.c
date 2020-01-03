@@ -9,12 +9,13 @@
 /* 
  * First string is assumed to be malloced second is not
  */
-void combine_string(char **first, char *second) {
+char *combine_string(char **first, char *second) {
   char *combined = malloc(sizeof(char) * (strlen((*first)) + strlen(second) + 1));
   strcpy(combined, (*first));
   strcat(combined, second);
   free((*first));;
   (*first) = combined;
+  return (*first);
 } /* combine_string() */
 
 /*
@@ -33,7 +34,11 @@ void combine_string_arrays(char ***first, char **second, int length) {
 void space_padding(char ***string, int length, int mod) {
   char **array = (*string);
   for (int i = 0; i < length; i++) {
-    int spaces_needed = (mod - (strlen((*(array + i)))%mod)) + 1;
+    int allignment = (strlen((*(array + i)))%mod);
+    if (allignment == 0) {
+      allignment = 5;
+    }
+    int spaces_needed = ((mod + 1) - allignment);
     for (int j = 0; j < spaces_needed; j++) {
       combine_string((array + i), " ");
     }
@@ -42,14 +47,16 @@ void space_padding(char ***string, int length, int mod) {
 
 /*
  * creates a node representing a line of text in a menu and returns it
+ * content and links are assumed to be malloc'd though might change.
  */
-menu_n *create_menu_node(char *content, char **links, int num_links, int selectable, int type) {
+menu_n *create_menu_node(char *content, char **links, int num_links, int selectable, int type, int spaces_after) {
   menu_n *new_node = malloc(sizeof(menu_n));
   new_node->content = content;
   new_node->next = NULL;
   new_node->prev = NULL;
   new_node->type = type;
-  new_node->draw_function = &draw_plain_text;
+  new_node->spaces_after = spaces_after;
+  new_node->draw_function = &draw_stats;
   new_node->selectable = selectable;
   new_node->link = malloc(sizeof(link_n));
   new_node->link->link_c = (*links);
@@ -62,24 +69,42 @@ menu_n *create_menu_node(char *content, char **links, int num_links, int selecta
   }
   first_link->link->prev = new_node->link;
   new_node->link->next = first_link->link;
+  switch (type) {
+    case 1:
+      new_node->select_function = &change_menu;
+      break;
+    case 2:
+      new_node->select_function = NULL;
+      break;
+    case 3:
+      new_node->select_function = NULL;
+      break;
+    case 4:
+      new_node->select_function = NULL;
+      break;
+    case 5:
+      new_node->select_function = NULL;
+      break;
+    case 6:
+      new_node->select_function = NULL;
+      break;
+  }
   return new_node;
 } /* create_menu_node() */
 
-/*
- * NOT DONE
- * creates a menu without a file, just with strings
- */
-menu_n *menu_from_strings(char **strings, char **links, int strings_length, int  selectable, int type) {
-  menu_n *first_node = create_menu_node((*strings), links, 1, selectable, type);
-  first_node->prev = NULL;
-  menu_n *traversal_node = first_node;
-  for (int i = 1; i < strings_length; i++) {
-    traversal_node->next = create_menu_node((*(strings + i)), links, 1, selectable, type);
-    traversal_node->next->prev = traversal_node;
-    traversal_node = traversal_node->next;
+void append_menu_node(menu_n *original, menu_n *new) {
+  while (original->next != NULL) {
+    original = original->next;
   }
-  return first_node;
-} /* menu_from_strings() */
+  original->next = new;
+  new->prev = original;
+}
+
+void append_menu_text(menu_n *original, char *new) {
+  char *link = strdup("exit");
+  menu_n *new_node = create_menu_node(new, &link, 1, 0, 1, 1);
+  append_menu_node(original, new_node);
+}
 
 /*
  * Returns total occurences of a character within provided string
@@ -98,7 +123,7 @@ int occurences_of_character(char c, char *string) {
 /*
  * returns actual integer values, so "10" -> 10
  */
-int * char_to_int_array(char **old_array, int size) {
+int *char_to_int_array(char **old_array, int size) {
   int *new_results = malloc(sizeof(int) * size);
   for (int i = 0; i < size; i++) {
     char *current_string = (*(old_array + i));

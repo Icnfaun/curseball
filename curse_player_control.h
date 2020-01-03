@@ -42,3 +42,5 @@ char *get_player_id_lines(char *, char *);
 void player_info_menu(menu_n *);
 int evaluate_main_position(char *);
 char **get_spreadsheet_info(int *, char *, char *, int);
+menu_n *create_statline(char **, int, char *, int);
+char *position_to_text(int);

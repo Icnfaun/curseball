@@ -105,6 +105,7 @@ void search_player(menu_n *current_node) {
     search_results->next = NULL;
     search_results->type = 5;
     search_results->selectable = 1;
+    search_results->spaces_after = 1;
     search_results->content = result_content;
     search_results->link->link_c = strdup(result_id);
     search_results->link->next = search_results->link;
@@ -162,16 +163,24 @@ char *get_player_id_lines(char *filename, char *player_id) {
  */
 void player_info_menu(menu_n *player) {
   int total_lines = 0;
-  char *link = strdup("0");
-  char **player_menu_lines_final = get_spreadsheet_info(&total_lines, "Batting.csv", player->link->link_c, 1);
-  int position = evaluate_main_position(player->link->link_c);
-  char *header = strdup("Yr    G    AB   R    H    2B   HR   RBI  SB   BB   SO");
-  int wanted_columns[] = {5,6,7,8,9,11,12,13,15,16};
+  char filename[] = "Pitching.csv";
+  int position = evaluate_main_position(player->link->link_c); 
+  if (position != 1) {
+    strcpy(filename, "Batting.csv");
+  }
+  char **player_menu_lines_final = get_spreadsheet_info(&total_lines, filename, player->link->link_c, 1);
+  int wanted_columns_b[] =  {5,6,7,8,9,11,12,13,15,16};
+  int wanted_columns_p[] =  {7,5,6,24,19,11,13,14,16,17};
   for (int i = 0; i < 10; i++) {
     space_padding(&player_menu_lines_final, total_lines, 5);
-    combine_string_arrays(&player_menu_lines_final, get_spreadsheet_info(NULL, "Batting.csv", player->link->link_c, wanted_columns[i]), total_lines);
-    current_menu_g = menu_from_strings(player_menu_lines_final, &link, total_lines, 1, 6);
+    if (position == 1) {
+      combine_string_arrays(&player_menu_lines_final, get_spreadsheet_info(NULL, "Pitching.csv", player->link->link_c, wanted_columns_p[i]), total_lines);
+    }
+    else {
+      combine_string_arrays(&player_menu_lines_final, get_spreadsheet_info(NULL, "Batting.csv", player->link->link_c, wanted_columns_b[i]), total_lines);
+    }
   }
+  current_menu_g = create_statline(player_menu_lines_final, total_lines, player->link->link_c, position);
 } /* player_info_menu() */
 
 /*
@@ -252,3 +261,75 @@ char **get_spreadsheet_info(int *size, char *filename, char *player_id, int colu
   }
   return results;
 } /* get_spreadsheet_info() */
+
+/*
+ * NOT DONE
+ */
+menu_n *create_statline(char **strings, int num_strings, char *player_id, int position) {
+  char *link = strdup("0");
+  char *first_name = (*get_spreadsheet_info(NULL, "People.csv", player_id, 13));
+  char *last_name = (*get_spreadsheet_info(NULL, "People.csv", player_id, 14));
+  char *full_name = combine_string(&first_name, " ");
+  combine_string(&full_name, last_name);
+  free(last_name);
+  menu_n *first_node = create_menu_node(full_name, &link, 1, 0, 6, 0);
+  append_menu_text(first_node, position_to_text(position));
+  char *bats = (*get_spreadsheet_info(NULL, "People.csv", player_id, 18));
+  char *throws = (*get_spreadsheet_info(NULL, "People.csv", player_id, 19));
+  char *bats_text = strdup("Bats: ");
+  combine_string(&bats_text, bats);
+  combine_string(&bats_text, "     Throws: ");
+  combine_string(&bats_text, throws);
+  free(bats);
+  free(throws);
+  append_menu_text(first_node, bats_text);
+  char *content = NULL;
+  if (position == 1) {
+    content = strdup("Year  G    W    L    BF   ERA  SV   H    ER   BB   SO");
+  }
+  else {
+    content = strdup("Year  G     PA   R    H    2B   HR   RBI  SB   BB   SO");
+  }
+  append_menu_node(first_node, create_menu_node(content, &link, 1, 1, 6, 1));
+  first_node->prev = NULL;
+  menu_n *traversal_node = first_node;
+  for (int i = 0; i < num_strings; i++) {
+    int spaces_after = 0;
+    if (i == num_strings - 1) {
+      spaces_after = 1;    
+    }
+    append_menu_node(first_node, create_menu_node((*(strings + i)), &link, 1, 1, 6, spaces_after));
+  }
+  char *import_menu = strdup("import_player_menu");
+  append_menu_node(first_node, create_menu_node("Import", &import_menu, 1, 1, 1, 1));
+  append_menu_node(first_node, create_menu_node("Back", &import_menu, 1,1,1,1));
+  return first_node;
+} /* menu_from_strings() */
+
+char *position_to_text(int position) {
+  char *text_position = NULL;
+  switch (position) {
+    case 1:
+      text_position = strdup("Pitcher");
+      break;
+    case 2:
+      text_position = strdup("Catcher");
+      break;
+    case 3:
+      text_position = strdup("First Baseman");
+      break;
+    case 4:
+      text_position = strdup("Second Baseman");
+      break;
+    case 5:
+      text_position = strdup("Third Baseman");
+      break;
+    case 6:
+      text_position = strdup("Shortstop");
+      break;
+    case 7:
+      text_position = strdup("Outfielder");
+      break; 
+  }
+  return text_position;
+}

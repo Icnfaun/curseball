@@ -16,6 +16,7 @@
 #include "curse_sound.h"
 #include "curse_menu.h"
 #include "curse_player_control.h"
+#include "curse_utilities.h"
 
 #define UP    (0)
 #define DOWN  (1)
@@ -138,8 +139,10 @@ void display_menu (WINDOW *window) {
       current_node->link = current_node->link->prev;
     }
     if (key == 10) {
-      current_node->select_function(current_node);
-      clear();
+      if (current_node->select_function != NULL) {
+        current_node->select_function(current_node);
+      }
+      erase();
       return;
     }
   }
@@ -168,9 +171,10 @@ menu_n *create_menu(char *filename) {
     int bytes_read = 0;
     int new_bytes = 0;
     traversal_node = malloc(sizeof(menu_n));
-    sscanf(current_line, "%d,%d,%[^,],%i,%n"
+    sscanf(current_line, "%d,%d,%d,%[^,],%i,%n"
            , &traversal_node->type
            , &traversal_node->selectable
+           , &traversal_node->spaces_after
            , node_contents
            , &num_links
            , &bytes_read);
@@ -297,15 +301,24 @@ void free_menu_node(menu_n *menu) {
 /*
  * This function draws contents of menu files to the window specified
  * it returns the number of lines that it took to write the contents
+ *
+ * tabs and newlines within a lines content will break this currently
+ * (anything taking up more than one space on the screen)
  */
 int draw_lines(char *node_contents, int col, WINDOW *game_w) {
   int extra_cols = 0;
   int current_line = START;
   char *current_word = malloc(sizeof(char) * (strlen(node_contents) + 1));
+  char *current_whitespace = malloc(sizeof(char) * (strlen(node_contents) + 1));
   int total_chars_read = 0;
   int cur_chars_read = 0;
   while (total_chars_read < strlen(node_contents)) {
-    sscanf(node_contents + total_chars_read , "%1000s %n", current_word, &cur_chars_read);
+    strcpy(current_word, "");
+    strcpy(current_whitespace, "");
+    sscanf(node_contents + total_chars_read , "%1000s%n%1000[ ]", current_word, &cur_chars_read, current_whitespace);
+    if (strcmp(current_whitespace, "") != 0) {
+     combine_string(&current_word, current_whitespace);
+    }
     while (strlen(current_word) >= wscreen_width) {
       char current_chunk[MAX_LINE_LEN] = "";
       strncpy(current_chunk, current_word, wscreen_width - current_line);
@@ -322,7 +335,7 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
     }
     total_chars_read += cur_chars_read;
     mvwprintw(game_w, col, current_line, current_word);
-    current_line += strlen(current_word) + WHITESPACE;
+    current_line += strlen(current_word);
   }
   return extra_cols;
 } /* draw_lines() */
@@ -361,44 +374,49 @@ int draw_option(menu_n *node, int col, WINDOW *game_w) {
   return draw_lines(full_line, col, game_w);
 } /* draw_option() */
 
+int draw_stats(menu_n *node, int col, WINDOW *game_w) {
+  int shift = atoi(node->link->link_c);  
+  char visible_text[MAX_LINE_LEN] = "";
+  strncpy(visible_text, node->content + shift, wscreen_width-1);
+  return draw_lines(visible_text, col, game_w);
+}
+
 /*
  * This function goes through each node in a menu list and draws it to the
  * given window, it also highlights the current selected node
  */
 void draw_menu(WINDOW *game_w, menu_n *menu, int selected) {
-  menu_n *traversal_node = menu;
+  menu_n *traversal_node = menu; 
   int col = 1;
-  int offset = 0;
   int total_multilines = 0;
   int current_multilines = 0;
   int current_node = 1;
-  while (traversal_node != NULL) {
+  bool selected_on_screen = false;
+  while ((col <= wscreen_height-1) && (traversal_node != NULL)) {
     if (current_node == selected) {
-      if (col > wscreen_height + 1) {
-        werase(game_w);
-        col = 1;
-      }
       wattron(game_w, COLOR_PAIR(2));
+      selected_on_screen = true;
     }
     current_multilines = traversal_node->draw_function(traversal_node, col, game_w);
     if (current_node == selected) {
       wattroff(game_w, COLOR_PAIR(2));
     }
     total_multilines += current_multilines;
-    col += current_multilines;
+    col += current_multilines + traversal_node->spaces_after + 1;
     traversal_node = traversal_node->next;
     current_node++;
-    col += 2;
-    if (menu->type == 6) {
-      col --;
-    }
+  }
+  if (!selected_on_screen) {
+    werase(game_w);
+    draw_menu(game_w, menu->next, selected - 1);
+    return;
   }
   box(game_w, 0, 0);
   wrefresh(game_w);
 } /* draw_menu() */
 
 /*
- * finds the first selectable node and returns how many nodes in it is.
+ * finds the first selectable node and returns how many nodes deep it is.
  */
 int menu_select_init(menu_n *menu) {
   menu_n *traversal_node = menu;
