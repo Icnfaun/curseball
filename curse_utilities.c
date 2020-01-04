@@ -3,6 +3,7 @@
 #include <malloc.h>
 #include <math.h>
 #include <ncurses.h>
+#include <ctype.h>
 
 #include "curse_menu.h"
 
@@ -131,3 +132,11 @@ int *char_to_int_array(char **old_array, int size) {
   }
   return new_results;
 } /* char_to_int_array() */
+
+void string_to_lower(char *string) {
+  int string_length = strlen(string);
+  for (int i = 0; i < string_length; i++) {
+    char current_letter = (*(string + i));
+    (*(string + i)) = tolower(current_letter);
+  }
+}

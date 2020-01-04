@@ -13,8 +13,10 @@
 /*
  * Code for the import player page, mainly used to get the correct id to later create player files with
  * edits the current menu to display results, won't work for any other page really unless you format it exactly
- * TODO change the format of the function, so you dont need to work with adjacent nodes so much
- * TODO make search case insensitive
+ * 
+ * Function unfortunatly has a very specific use, reworking it would require making a mess working with
+ * adjacent nodes in the select_funciton() area, so a mess here is preferred for now.
+ * TODO use create_menu_node() instead of manually doing it. 
  */
 void search_player(menu_n *current_node) {
   menu_n *traversal_node = current_node;
@@ -33,8 +35,10 @@ void search_player(menu_n *current_node) {
     traversal_node = traversal_node->prev;
 
   }
-  char *first_name = traversal_node->next->link->link_c;
-  char *last_name = traversal_node->next->next->link->link_c;
+  char *first_name = strdup(traversal_node->next->link->link_c);
+  string_to_lower(first_name);
+  char *last_name = strdup(traversal_node->next->next->link->link_c);
+  string_to_lower(last_name);
   menu_n *search_results = NULL;
   int number_of_results = 0;
   FILE *database = fopen("teams/players/data/People.csv", "r");
@@ -59,15 +63,23 @@ void search_player(menu_n *current_node) {
           break;
         case 14:
           strcpy(cur_first_name, current_line_t);
-          if(strncmp(cur_first_name, first_name, strlen(first_name)) != 0) {
+          char *cur_first_name_lower = strdup(cur_first_name);
+          string_to_lower(cur_first_name_lower);
+          if(strncmp(cur_first_name_lower, first_name, strlen(first_name)) != 0) {
+            free(cur_first_name_lower);
             goto Match;
           }
+          free(cur_first_name_lower);
           break;
         case 15:
           strcpy(cur_last_name, current_line_t);
-          if(strncmp(cur_last_name, last_name, strlen(last_name)) != 0) {
+          char *cur_last_name_lower = strdup(cur_last_name);
+          string_to_lower(cur_last_name_lower);
+          if(strncmp(cur_last_name_lower, last_name, strlen(last_name)) != 0) {
+            free(cur_last_name_lower);
             goto Match;
           }
+          free(cur_last_name_lower);
           break;
         case 21:
           strcpy(first_played, current_line_t);
@@ -80,12 +92,12 @@ void search_player(menu_n *current_node) {
       current_category++;
     }
     free(current_line_d);
-    char *result_content = malloc(sizeof(char) * (strlen(first_name) + strlen(last_name) + strlen(first_played) + strlen(last_played) + 8));
+    char *result_content = malloc(sizeof(char) * (strlen(cur_first_name) + strlen(cur_last_name) + strlen(first_played) + strlen(last_played) + 8));
     char *result_id = malloc(sizeof(char) * (strlen(unique_id) + 1));
     strcpy(result_id, unique_id);
-    strcpy(result_content, first_name);
+    strcpy(result_content, cur_first_name);
     strcat(result_content, " ");
-    strcat(result_content, last_name);
+    strcat(result_content, cur_last_name);
     strcat(result_content, " (");
     strcat(result_content, first_played);
     strcat(result_content, " - ");
@@ -131,7 +143,7 @@ void search_player(menu_n *current_node) {
 } /*  search_player() */
 
 /*
- * Gets lines with a matching player id form a specified file residing in
+ * Gets lines with a matching player id from a specified file residing in
  * players/teams/data, returns in string form
  */
 char *get_player_id_lines(char *filename, char *player_id) {
@@ -263,7 +275,8 @@ char **get_spreadsheet_info(int *size, char *filename, char *player_id, int colu
 } /* get_spreadsheet_info() */
 
 /*
- * NOT DONE
+ * Creates and displays a statistics menu on a specific player, helper function for
+ * player_info_menu(), does all the gross stuff like making the header, and grabbing extra info.
  */
 menu_n *create_statline(char **strings, int num_strings, char *player_id, int position) {
   char *link = strdup("0");
@@ -304,8 +317,12 @@ menu_n *create_statline(char **strings, int num_strings, char *player_id, int po
   append_menu_node(first_node, create_menu_node("Import", &import_menu, 1, 1, 1, 1));
   append_menu_node(first_node, create_menu_node("Back", &import_menu, 1,1,1,1));
   return first_node;
-} /* menu_from_strings() */
+} /* create_statline() */
 
+/* 
+ * This function returns an allocated string representing a players position
+ * given an integer.
+ */
 char *position_to_text(int position) {
   char *text_position = NULL;
   switch (position) {
@@ -332,4 +349,4 @@ char *position_to_text(int position) {
       break; 
   }
   return text_position;
-}
+} /* position_to_text() */

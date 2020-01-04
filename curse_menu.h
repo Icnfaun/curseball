@@ -58,6 +58,6 @@ int menu_select(struct menu_node *, int, int);
 void option_select(menu_n *);
 void change_menu(menu_n *);
 int setting_finder(char *);
-void edit_link(menu_n *, char);
+void edit_link(menu_n *, int);
 void refresh_window_size();
 

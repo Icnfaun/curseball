@@ -58,6 +58,7 @@ void menu() {
 void init_libs() {
   initscr();
   noecho();
+  cbreak();
   start_color();
   curs_set(0);
   init_pair(1, COLOR_RED, COLOR_BLACK);
@@ -123,7 +124,7 @@ void display_menu (WINDOW *window) {
     draw_menu(window, current_menu_g, selected);
     key = getch();
     menu_n *current_node = get_selected(current_menu_g, selected);
-    if (current_node->type == 3 && ((key > 31 && key < 127) || key == 263)) {
+    if (current_node->type == 3 && ((key > 31 && key < 127) || (key == 263))) {
       edit_link(current_node, key);
     }
     if (key == KEY_UP) {
@@ -317,7 +318,7 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
     strcpy(current_whitespace, "");
     sscanf(node_contents + total_chars_read , "%1000s%n%1000[ ]", current_word, &cur_chars_read, current_whitespace);
     if (strcmp(current_whitespace, "") != 0) {
-     combine_string(&current_word, current_whitespace);
+     strcat(current_word, current_whitespace);
     }
     while (strlen(current_word) >= wscreen_width) {
       char current_chunk[MAX_LINE_LEN] = "";
@@ -346,7 +347,7 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
  */
 int draw_search_box(menu_n *node, int col, WINDOW *game_w) {
   char full_line[MAX_LINE_LEN] = "";
-  strcat(full_line, node->content);
+  strcpy(full_line, node->content);
   if (node->link->link_c != NULL) {
     strcat(full_line, " ");
     strcat(full_line, node->link->link_c);
@@ -513,27 +514,27 @@ int setting_finder(char *setting) {
  * This edits a seach box's contents based on what you type, not sure if deletion works
  * on different computers yet, might be funky
  */
-void edit_link(menu_n *current_node, char typed) {
-  char typed_contents[MAX_LINE_LEN] = "";
+void edit_link(menu_n *current_node, int typed) {
+  char typed_contents[MAX_LINE_LEN];
   int string_length = 0;
   if (current_node->link->link_c != NULL) {
     string_length = strlen(current_node->link->link_c);
     strcpy(typed_contents, current_node->link->link_c);
     free(current_node->link->link_c);
-    if (typed == 7) {
+    if (typed == 263) {
       typed_contents[string_length - 1] = '\0';
     }
   }
-  if (typed != 7) {
+  if ((typed != 263) && (string_length + 2 < MAX_LINE_LEN)) {
     typed_contents[string_length] = typed;
+    typed_contents[string_length + 1] = '\0';
     string_length++;
   }
-  if (strlen(typed_contents) > 0) {
-    current_node->link->link_c = malloc(sizeof(char) * (string_length + 1));
-    strcpy(current_node->link->link_c, typed_contents);
+  if (string_length > 0) {
+    current_node->link->link_c = strdup(typed_contents);
   }
   else {
-    current_node->link->link_c = NULL;
+    current_node->link->link_c = strdup("");
   }
 }/*  edit_link() */
 
