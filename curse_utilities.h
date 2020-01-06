@@ -7,3 +7,4 @@ menu_n *create_menu_node(char *, char **, int, int, int, int);
 void append_menu_node(menu_n *, menu_n *);
 void append_menu_text(menu_n *, char *);
 void string_to_lower(char *);
+void free_string_array(char **, int);

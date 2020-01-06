@@ -49,6 +49,7 @@ void search_player(menu_n *current_node) {
   Match:
   while (fgets(current_line, MAX_LINE_LEN, database) != NULL) {
     char *current_line_d = strdup(current_line);
+    char *current_line_head = current_line_d;
     char cur_first_name[100] = "";
     char cur_last_name[100] = "";
     char first_played[100] = "";
@@ -91,7 +92,7 @@ void search_player(menu_n *current_node) {
       current_line_t = strsep(&current_line_d, ",");
       current_category++;
     }
-    free(current_line_d);
+    free(current_line_head);
     char *result_content = malloc(sizeof(char) * (strlen(cur_first_name) + strlen(cur_last_name) + strlen(first_played) + strlen(last_played) + 8));
     char *result_id = malloc(sizeof(char) * (strlen(unique_id) + 1));
     strcpy(result_id, unique_id);
@@ -119,7 +120,7 @@ void search_player(menu_n *current_node) {
     search_results->selectable = 1;
     search_results->spaces_after = 1;
     search_results->content = result_content;
-    search_results->link->link_c = strdup(result_id);
+    search_results->link->link_c = result_id;
     search_results->link->next = search_results->link;
     search_results->link->prev = search_results->link;
     search_results->draw_function = &draw_plain_text;
@@ -165,6 +166,7 @@ char *get_player_id_lines(char *filename, char *player_id) {
       }
     }
   }
+  free(full_filename);
   fclose(data);
   data = NULL;
   return results;
@@ -181,18 +183,25 @@ void player_info_menu(menu_n *player) {
     strcpy(filename, "Batting.csv");
   }
   char **player_menu_lines_final = get_spreadsheet_info(&total_lines, filename, player->link->link_c, 1);
-  int wanted_columns_b[] =  {5,6,7,8,9,11,12,13,15,16};
-  int wanted_columns_p[] =  {7,5,6,24,19,11,13,14,16,17};
+  int wanted_columns[10] = {};
+  char wanted_filename[15] = {};
+  if (position == 1) {
+    int pitching_columns[10] = {7,5,6,24,19,11,13,14,16,17};
+    memcpy(wanted_columns, pitching_columns, sizeof(int) * 10);
+    strcpy(wanted_filename, "Pitching.csv");
+  }
+  else {
+    int batting_columns[10] = {5,6,7,8,9,11,12,13,15,16};
+    memcpy(wanted_columns, batting_columns, sizeof(int) * 10);
+    strcpy(wanted_filename, "Batting.csv");
+  }
   for (int i = 0; i < 10; i++) {
     space_padding(&player_menu_lines_final, total_lines, 5);
-    if (position == 1) {
-      combine_string_arrays(&player_menu_lines_final, get_spreadsheet_info(NULL, "Pitching.csv", player->link->link_c, wanted_columns_p[i]), total_lines);
-    }
-    else {
-      combine_string_arrays(&player_menu_lines_final, get_spreadsheet_info(NULL, "Batting.csv", player->link->link_c, wanted_columns_b[i]), total_lines);
-    }
+    combine_string_arrays(&player_menu_lines_final, get_spreadsheet_info(NULL, wanted_filename, player->link->link_c, wanted_columns[i]), total_lines);
   }
+  free(current_menu_g);
   current_menu_g = create_statline(player_menu_lines_final, total_lines, player->link->link_c, position);
+  menu_changed_g = true;
 } /* player_info_menu() */
 
 /*
@@ -237,6 +246,9 @@ int evaluate_main_position(char *player_id) {
       most_played_position = i+1;
     }
   }
+  free(frequency_i);
+  free_string_array(positions, number_of_results);
+  free_string_array(frequency, number_of_results);
   return most_played_position;
 } /* evaluate_position */
 
@@ -246,6 +258,7 @@ int evaluate_main_position(char *player_id) {
  */
 char **get_spreadsheet_info(int *size, char *filename, char *player_id, int column) {
   char *player_data = get_player_id_lines(filename, player_id);
+  char *player_data_head = player_data;
   int number_of_lines = occurences_of_character('\n', player_data);
   char **results = malloc(sizeof(char *) * number_of_lines);
   int current_result = 0;
@@ -254,6 +267,7 @@ char **get_spreadsheet_info(int *size, char *filename, char *player_id, int colu
   while (sscanf(player_data, "%[^\n]\n%n", current_line, &bytes_read) == 1) {
     player_data += bytes_read;
     char *current_line_m = strdup(current_line);
+    char *current_line_head_pointer = current_line_m;
     char *current_data = strsep(&current_line_m, ",");
     int current_column = 0;
     while (current_data != NULL) {
@@ -267,10 +281,12 @@ char **get_spreadsheet_info(int *size, char *filename, char *player_id, int colu
       }
       current_column++;
     } 
+    free(current_line_head_pointer);
   }
   if (size != NULL) {
     (*size) = number_of_lines;
   }
+  free(player_data_head);
   return results;
 } /* get_spreadsheet_info() */
 
@@ -279,13 +295,13 @@ char **get_spreadsheet_info(int *size, char *filename, char *player_id, int colu
  * player_info_menu(), does all the gross stuff like making the header, and grabbing extra info.
  */
 menu_n *create_statline(char **strings, int num_strings, char *player_id, int position) {
-  char *link = strdup("0");
   char *first_name = (*get_spreadsheet_info(NULL, "People.csv", player_id, 13));
   char *last_name = (*get_spreadsheet_info(NULL, "People.csv", player_id, 14));
   char *full_name = combine_string(&first_name, " ");
   combine_string(&full_name, last_name);
   free(last_name);
-  menu_n *first_node = create_menu_node(full_name, &link, 1, 0, 6, 0);
+  char *name_link = strdup("exit");
+  menu_n *first_node = create_menu_node(full_name, &name_link, 1, 0, 6, 0);
   append_menu_text(first_node, position_to_text(position));
   char *bats = (*get_spreadsheet_info(NULL, "People.csv", player_id, 18));
   char *throws = (*get_spreadsheet_info(NULL, "People.csv", player_id, 19));
@@ -303,7 +319,8 @@ menu_n *create_statline(char **strings, int num_strings, char *player_id, int po
   else {
     content = strdup("Year  G     PA   R    H    2B   HR   RBI  SB   BB   SO");
   }
-  append_menu_node(first_node, create_menu_node(content, &link, 1, 1, 6, 1));
+  char *stat_header_link = strdup("0");
+  append_menu_node(first_node, create_menu_node(content, &stat_header_link, 1, 1, 6, 1));
   first_node->prev = NULL;
   menu_n *traversal_node = first_node;
   for (int i = 0; i < num_strings; i++) {
@@ -311,11 +328,15 @@ menu_n *create_statline(char **strings, int num_strings, char *player_id, int po
     if (i == num_strings - 1) {
       spaces_after = 1;    
     }
-    append_menu_node(first_node, create_menu_node((*(strings + i)), &link, 1, 1, 6, spaces_after));
+    char *current_link = strdup("0");
+    append_menu_node(first_node, create_menu_node((*(strings + i)), &current_link, 1, 1, 6, spaces_after));
   }
   char *import_menu = strdup("import_player_menu");
-  append_menu_node(first_node, create_menu_node("Import", &import_menu, 1, 1, 1, 1));
-  append_menu_node(first_node, create_menu_node("Back", &import_menu, 1,1,1,1));
+  char *import_menu_2 = strdup("import_player_menu");
+  append_menu_node(first_node, create_menu_node(strdup("Import"), &import_menu, 1, 1, 1, 1));
+  append_menu_node(first_node, create_menu_node(strdup("Back"), &import_menu_2, 1,1,1,1));
+  free(strings);
+  free(player_id);
   return first_node;
 } /* create_statline() */
 

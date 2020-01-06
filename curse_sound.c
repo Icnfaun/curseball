@@ -33,6 +33,10 @@ void sdl_shutdown() {
     Mix_FreeChunk(current_sfx);
     current_sfx = NULL;
   }
+  if (current_sfx_name != NULL) {
+    free(current_sfx_name);
+    current_sfx_name = NULL;
+  }
   Mix_Quit();
   SDL_Quit();
 } /* sdl_shutdown() */

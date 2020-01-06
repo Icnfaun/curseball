@@ -26,7 +26,10 @@ void combine_string_arrays(char ***first, char **second, int length) {
   char **first_array = (*first);
   for (int i = 0; i < length; i++) {
     combine_string(((first_array + i)), (*(second + i)));
+    free(*(second + i));
+    (*(second + i)) == NULL;
   }
+  free(second);
 } /* combine_string_arrays() */
 
 /*
@@ -37,7 +40,7 @@ void space_padding(char ***string, int length, int mod) {
   for (int i = 0; i < length; i++) {
     int allignment = (strlen((*(array + i)))%mod);
     if (allignment == 0) {
-      allignment = 5;
+      allignment = mod;
     }
     int spaces_needed = ((mod + 1) - allignment);
     for (int j = 0; j < spaces_needed; j++) {
@@ -61,15 +64,15 @@ menu_n *create_menu_node(char *content, char **links, int num_links, int selecta
   new_node->selectable = selectable;
   new_node->link = malloc(sizeof(link_n));
   new_node->link->link_c = (*links);
-  menu_n *first_link = new_node;
+  menu_n *first_node = new_node;
   for (int i = 1; i < num_links; i++) {
     new_node->link->next = malloc(sizeof(link_n));
     new_node->link->next->link_c = (*(links + i));
     new_node->link->next->prev = new_node->link;
     new_node->link = new_node->link->next;
   }
-  first_link->link->prev = new_node->link;
-  new_node->link->next = first_link->link;
+  first_node->link->prev = new_node->link;
+  new_node->link->next = first_node->link;
   switch (type) {
     case 1:
       new_node->select_function = &change_menu;
@@ -93,19 +96,26 @@ menu_n *create_menu_node(char *content, char **links, int num_links, int selecta
   return new_node;
 } /* create_menu_node() */
 
+/*
+ * adds a node to the END of a linked list of nodes
+ */
 void append_menu_node(menu_n *original, menu_n *new) {
   while (original->next != NULL) {
     original = original->next;
   }
   original->next = new;
   new->prev = original;
-}
+} /* append_menu_node() */
 
+/*
+ * creates and adds a menu node to the END of a linked list of nodes
+ * form a given string
+ */
 void append_menu_text(menu_n *original, char *new) {
   char *link = strdup("exit");
   menu_n *new_node = create_menu_node(new, &link, 1, 0, 1, 1);
   append_menu_node(original, new_node);
-}
+} /* append_menu_text */
 
 /*
  * Returns total occurences of a character within provided string
@@ -133,10 +143,20 @@ int *char_to_int_array(char **old_array, int size) {
   return new_results;
 } /* char_to_int_array() */
 
+/*
+ * CHANGES any given string in to a lowercase version.
+ */
 void string_to_lower(char *string) {
   int string_length = strlen(string);
   for (int i = 0; i < string_length; i++) {
     char current_letter = (*(string + i));
     (*(string + i)) = tolower(current_letter);
   }
+} /* string_to_lower */
+
+void free_string_array(char **strings, int num_strings) {
+  for(int i = 0; i < num_strings; i++){
+    free(*(strings + i));
+  }
+  free(strings);
 }

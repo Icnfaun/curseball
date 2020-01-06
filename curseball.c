@@ -26,21 +26,6 @@ WINDOW *game_w = NULL;
 
 
 int main() {
-  menu_n *tester = malloc(sizeof(menu_n));
-  tester->link = malloc(sizeof(link_n));
-  tester->link->link_c = strdup("vottojo01");
-  player_info_menu(tester);
-  char *testing = get_player_id_lines("Fielding.csv", "vottojo01");
-  int total = -1;
-  char **testing2 = get_spreadsheet_info(&total, "Fielding.csv", "vottojo01", 5);
-  char **testing3 = get_spreadsheet_info(NULL, "Fielding.csv", "vottojo01", 6);
-  int *frequencies = char_to_int_array(testing3, total);
-  //printf("%d", total);
-  for (int i =0; i< total; i++) {
-    //printf("%s: %d\n", (*(testing2+i)), (*(frequencies + i)));
-  }
-  //printf("%s", testing);
-  //printf("%d", evaluate_main_position("vottojo01")); 
   init_libs();
   init_config("curse_config");
   menu();

@@ -48,7 +48,7 @@ void menu() {
   while (current_menu_g != NULL) {
     display_menu(game_w);
   }
-  free(current_menu_g);
+  //free(current_menu_g);
 } /* menu() */
 
 /*
@@ -103,7 +103,6 @@ void init_config(char * filename) {
       if (strncmp("start_menu", current_setting, 10) == 0) {
           start_menu = malloc(sizeof(char) * 25);
           sscanf(current_line, "%*[^=]=%[^\n]", start_menu);
-          printf("%s", start_menu);
       }
     }
   }
@@ -147,7 +146,6 @@ void display_menu (WINDOW *window) {
       return;
     }
   }
-  free_menu(current_menu_g);
 } /* display_menu() */
 
 /*
@@ -251,53 +249,38 @@ menu_n *create_menu(char *filename) {
 void free_menu(menu_n *menu) {
   execute_sfx("resources/menu_select.wav");
   menu_n *traversal_node = menu;
-  while (menu != NULL) {
-    traversal_node = menu->next;
-    free(menu->content);
-    menu->content = NULL;
-    menu_n *traversal_link = menu;
-    while (traversal_link->link != NULL) {
-      menu->link = menu->link->next;
-      free(traversal_link->link->link_c);
-      traversal_link->link->link_c = NULL;
-      free(traversal_link->link);
-      traversal_link->link = NULL;
-      traversal_link->prev = NULL;
-      traversal_link->next = NULL;
-      traversal_link = menu;
-    }
-    free(menu);
-    menu->next = NULL;
-    menu->prev = NULL;
-    menu = traversal_node;
+  while (traversal_node->prev != NULL) {
+    traversal_node = traversal_node->prev;
   }
+  while (traversal_node->next != NULL) {
+    traversal_node = traversal_node->next;
+    free_menu_node(traversal_node->prev);
+  }
+  free_menu_node(traversal_node);
 } /* free_menu() */
 
+/*
+ * This function frees all parts of a given menu node
+ */
 void free_menu_node(menu_n *menu) {
   free(menu->content);
   menu->content = NULL;
-  menu_n *traversal_link = menu;
-  while (traversal_link->link != NULL) {
-    free(traversal_link->link->link_c);
-    if ((traversal_link->link->next == menu->link) || (traversal_link->link->next = NULL)) {
-      free(traversal_link->link);
-      traversal_link->link->next = NULL;
-      traversal_link->link->prev = NULL;
-      traversal_link->link = NULL;
-    }
-    else {
-      traversal_link->link = traversal_link->link->next;
-      free(traversal_link->link->prev);
-      traversal_link->link->prev->next = NULL;
-      traversal_link->link->prev->prev = NULL;
-    }
-    
+  menu->link->prev->next = NULL;
+  while (menu->link->next != NULL) {
+    menu->link = menu->link->next;
+    free(menu->link->prev->link_c);
+    menu->link->prev->link_c = NULL;
+    free(menu->link->prev);
+    menu->link->prev = NULL;
   }
+  free(menu->link->link_c);
+  menu->link->link_c = NULL;
+  free(menu->link);
+  menu->link = NULL;
   free(menu);
   menu->next = NULL;
   menu->prev = NULL;
-
-}
+} /* free_menu_node() */
 
 /*
  * This function draws contents of menu files to the window specified
@@ -338,6 +321,8 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
     mvwprintw(game_w, col, current_line, current_word);
     current_line += strlen(current_word);
   }
+  free(current_word);
+  free(current_whitespace);
   return extra_cols;
 } /* draw_lines() */
 
@@ -347,13 +332,13 @@ int draw_lines(char *node_contents, int col, WINDOW *game_w) {
  */
 int draw_search_box(menu_n *node, int col, WINDOW *game_w) {
   char full_line[MAX_LINE_LEN] = "";
-  strcpy(full_line, node->content);
+  strncpy(full_line, node->content, MAX_LINE_LEN);
   if (node->link->link_c != NULL) {
-    strcat(full_line, " ");
-    strcat(full_line, node->link->link_c);
+    strncat(full_line, " ", MAX_LINE_LEN - strlen(node->content));
+    strncat(full_line, node->link->link_c, MAX_LINE_LEN - (strlen(node->content) + 1));
   }
   return draw_lines(full_line, col, game_w);
-}
+} /* draw_search_box() */
 
 /*
  * This function is the "draw_function" of plain text menu nodes
@@ -365,6 +350,7 @@ int draw_plain_text(menu_n *node, int col, WINDOW *game_w) {
 
 /*
  * This function is the "draw_function" for options/settings that can be adjusted.
+ * TODO fix possible overflow
  */
 int draw_option(menu_n *node, int col, WINDOW *game_w) {
   char full_line[MAX_LINE_LEN] = "";
@@ -375,12 +361,16 @@ int draw_option(menu_n *node, int col, WINDOW *game_w) {
   return draw_lines(full_line, col, game_w);
 } /* draw_option() */
 
+/*
+ * This function is the "draw_function" for player statistics that are displayed
+ * when you are about to import a character into the game.
+ */
 int draw_stats(menu_n *node, int col, WINDOW *game_w) {
   int shift = atoi(node->link->link_c);  
   char visible_text[MAX_LINE_LEN] = "";
   strncpy(visible_text, node->content + shift, wscreen_width-1);
   return draw_lines(visible_text, col, game_w);
-}
+} /* draw_stats() */
 
 /*
  * This function goes through each node in a menu list and draws it to the
@@ -525,7 +515,7 @@ void edit_link(menu_n *current_node, int typed) {
       typed_contents[string_length - 1] = '\0';
     }
   }
-  if ((typed != 263) && (string_length + 2 < MAX_LINE_LEN)) {
+  if ((typed != 263) && (string_length < MAX_LINE_LEN - 2)) {
     typed_contents[string_length] = typed;
     typed_contents[string_length + 1] = '\0';
     string_length++;
@@ -552,5 +542,7 @@ void refresh_window_size() {
  */
 void change_menu(menu_n *old_menu) {
   current_menu_g = create_menu(old_menu->link->link_c);
+  free_menu(old_menu);
   menu_changed_g = true;
+
 } /* change_menu() */
