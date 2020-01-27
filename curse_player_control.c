@@ -10,20 +10,19 @@
 
 #define MAX_LINE_LEN (1000)
 
+
 /*
- * Code for the import player page, mainly used to get the correct id to later create player files with
- * edits the current menu to display results, won't work for any other page really unless you format it exactly
+ * "select function" for the search button on the import player menu, mainly used to get the correct id to
+ * show player statistics, won't work for any other page really unless you format the menu exactly
  * 
- * Function unfortunatly has a very specific use, reworking it would require making a mess working with
- * adjacent nodes in the select_funciton() area, so a mess here is preferred for now.
  * TODO use create_menu_node() instead of manually doing it. 
  */
 void search_player(menu_n *current_node) {
-  menu_n *traversal_node = current_node;
-  while(traversal_node->next != NULL) {
-    traversal_node = traversal_node->next;    
+  menu_n *last_node = current_node;
+  while(last_node->next != NULL) {
+    last_node = last_node->next;    
   }
-  menu_n *last_node = traversal_node;
+  menu_n *traversal_node = last_node;
   int previous_results_cleared = 0;
   while (traversal_node->prev != NULL) {
     if ((!previous_results_cleared) && (traversal_node->next != last_node) && (traversal_node->next != NULL)) {
@@ -105,26 +104,14 @@ void search_player(menu_n *current_node) {
     strcat(result_content, last_played);
     strcat(result_content, ")");
     if (number_of_results == 0) {
-      search_results = malloc(sizeof(menu_n));
-      search_results->link = malloc(sizeof(link_n));
+      search_results = create_menu_node(result_content, &result_id, 1, 1, 5, 1);
       search_results->prev = NULL;
     }
     else {
-      search_results->next = malloc(sizeof(menu_n));
-      search_results->next->link = malloc(sizeof(link_n));
+      search_results->next = create_menu_node(result_content, &result_id, 1, 1, 5, 1);
       search_results->next->prev = search_results;
       search_results = search_results->next;
     }
-    search_results->next = NULL;
-    search_results->type = 5;
-    search_results->selectable = 1;
-    search_results->spaces_after = 1;
-    search_results->content = result_content;
-    search_results->link->link_c = result_id;
-    search_results->link->next = search_results->link;
-    search_results->link->prev = search_results->link;
-    search_results->draw_function = &draw_plain_text;
-    search_results->select_function = &player_info_menu;
     number_of_results++;
   }
   fclose(database);
@@ -332,11 +319,9 @@ menu_n *create_statline(char **strings, int num_strings, char *player_id, int po
     append_menu_node(first_node, create_menu_node((*(strings + i)), &current_link, 1, 1, 6, spaces_after));
   }
   char *import_menu = strdup("import_player_menu");
-  char *import_menu_2 = strdup("import_player_menu");
-  append_menu_node(first_node, create_menu_node(strdup("Import"), &import_menu, 1, 1, 1, 1));
-  append_menu_node(first_node, create_menu_node(strdup("Back"), &import_menu_2, 1,1,1,1));
+  append_menu_node(first_node, create_menu_node(strdup("Import"), &player_id, 1, 1, 1, 1));
+  append_menu_node(first_node, create_menu_node(strdup("Back"), &import_menu, 1,1,1,1));
   free(strings);
-  free(player_id);
   return first_node;
 } /* create_statline() */
 
@@ -371,3 +356,21 @@ char *position_to_text(int position) {
   }
   return text_position;
 } /* position_to_text() */
+
+void import_player_select(menu_n *current_node) {
+  char *player_id = current_node->link->link_c;
+  if (evaluate_main_position(player_id) == 1) {
+    import_pitcher(player_id);
+  }
+  else {
+    import_player(player_id);
+  }
+}
+
+void import_pitcher(char *player_id) {
+
+}
+
+void import_player(char *player_id) {
+
+}

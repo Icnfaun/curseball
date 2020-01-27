@@ -12,7 +12,7 @@ struct position_player_struct {
 }position;
 
 struct pitcher_struct {
-  int power;  //based on strikeouts, over 300 is a 100
+  int power;  //based on strikeouts, over 300 per is a 100
   int control; //based on walks per 9 innings less than 2 is a 100
   int durability; //based on innings pitched, more than 250 is a 100
   struct pitch_info_struct *pitches;
@@ -44,3 +44,5 @@ int evaluate_main_position(char *);
 char **get_spreadsheet_info(int *, char *, char *, int);
 menu_n *create_statline(char **, int, char *, int);
 char *position_to_text(int);
+void import_player(char *);
+void import_pitcher(char *);

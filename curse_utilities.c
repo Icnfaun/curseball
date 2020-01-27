@@ -21,6 +21,9 @@ char *combine_string(char **first, char *second) {
 
 /*
  * Combines 2 string arrays, results put into the pointer for the first
+ * second is freed, for convienence in regards to how function is used
+ * in curse_player_control.c
+ *
  */
 void combine_string_arrays(char ***first, char **second, int length) {
   char **first_array = (*first);
@@ -34,88 +37,22 @@ void combine_string_arrays(char ***first, char **second, int length) {
 
 /*
  * Adds spaces to a an array of strings to format them nicley
+ * basically like a tab, but varied in size, used for comvenience
+ * when making statistic pages for players.
  */
 void space_padding(char ***string, int length, int mod) {
   char **array = (*string);
   for (int i = 0; i < length; i++) {
-    int allignment = (strlen((*(array + i)))%mod);
-    if (allignment == 0) {
-      allignment = mod;
+    int spaces_used = (strlen((*(array + i)))%mod);
+    if (spaces_used == 0) {
+      spaces_used = mod;
     }
-    int spaces_needed = ((mod + 1) - allignment);
+    int spaces_needed = ((mod + 1) - spaces_used);
     for (int j = 0; j < spaces_needed; j++) {
       combine_string((array + i), " ");
     }
   }
 } /* space_padding() */
-
-/*
- * creates a node representing a line of text in a menu and returns it
- * content and links are assumed to be malloc'd though might change.
- */
-menu_n *create_menu_node(char *content, char **links, int num_links, int selectable, int type, int spaces_after) {
-  menu_n *new_node = malloc(sizeof(menu_n));
-  new_node->content = content;
-  new_node->next = NULL;
-  new_node->prev = NULL;
-  new_node->type = type;
-  new_node->spaces_after = spaces_after;
-  new_node->draw_function = &draw_stats;
-  new_node->selectable = selectable;
-  new_node->link = malloc(sizeof(link_n));
-  new_node->link->link_c = (*links);
-  menu_n *first_node = new_node;
-  for (int i = 1; i < num_links; i++) {
-    new_node->link->next = malloc(sizeof(link_n));
-    new_node->link->next->link_c = (*(links + i));
-    new_node->link->next->prev = new_node->link;
-    new_node->link = new_node->link->next;
-  }
-  first_node->link->prev = new_node->link;
-  new_node->link->next = first_node->link;
-  switch (type) {
-    case 1:
-      new_node->select_function = &change_menu;
-      break;
-    case 2:
-      new_node->select_function = NULL;
-      break;
-    case 3:
-      new_node->select_function = NULL;
-      break;
-    case 4:
-      new_node->select_function = NULL;
-      break;
-    case 5:
-      new_node->select_function = NULL;
-      break;
-    case 6:
-      new_node->select_function = NULL;
-      break;
-  }
-  return new_node;
-} /* create_menu_node() */
-
-/*
- * adds a node to the END of a linked list of nodes
- */
-void append_menu_node(menu_n *original, menu_n *new) {
-  while (original->next != NULL) {
-    original = original->next;
-  }
-  original->next = new;
-  new->prev = original;
-} /* append_menu_node() */
-
-/*
- * creates and adds a menu node to the END of a linked list of nodes
- * form a given string
- */
-void append_menu_text(menu_n *original, char *new) {
-  char *link = strdup("exit");
-  menu_n *new_node = create_menu_node(new, &link, 1, 0, 1, 1);
-  append_menu_node(original, new_node);
-} /* append_menu_text */
 
 /*
  * Returns total occurences of a character within provided string
@@ -133,6 +70,8 @@ int occurences_of_character(char c, char *string) {
 
 /*
  * returns actual integer values, so "10" -> 10
+ * used for getting lots of stats on players and easily converting them all
+ * from text.
  */
 int *char_to_int_array(char **old_array, int size) {
   int *new_results = malloc(sizeof(int) * size);

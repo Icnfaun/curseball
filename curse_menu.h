@@ -60,4 +60,7 @@ void change_menu(menu_n *);
 int setting_finder(char *);
 void edit_link(menu_n *, int);
 void refresh_window_size();
+menu_n *create_menu_node(char *, char **, int, int, int, int);
+void append_menu_node(menu_n *, menu_n *);
+void append_menu_text(menu_n *, char *);
 
