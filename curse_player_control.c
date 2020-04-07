@@ -359,18 +359,10 @@ char *position_to_text(int position) {
 
 void import_player_select(menu_n *current_node) {
   char *player_id = current_node->link->link_c;
-  if (evaluate_main_position(player_id) == 1) {
-    import_pitcher(player_id);
-  }
-  else {
-    import_player(player_id);
-  }
+  //player *import_player = malloc(sizeof(player));
+  // (*get_spreadsheet_info(NULL, "People.csv", player_id, 13));
 }
 
-void import_pitcher(char *player_id) {
-
-}
-
-void import_player(char *player_id) {
+int evaluate_stat(int actual_stat, int perfect_stat) {
 
 }

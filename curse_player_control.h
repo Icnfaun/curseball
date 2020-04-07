@@ -1,7 +1,12 @@
 extern menu_n *current_menu_g;
 extern bool menu_changed_g;
 
-struct position_player_struct {
+struct player_struct {
+  char first_name[30];
+  char last_name[30];
+  int bats;
+  int throws;
+  int defense;  //based on average errors commited, around 25 errors is a 50
   int main_position; //position that will appear when assembling teams, a number 1-9 
   int power;      //based on slugging percentage, a 100 is around a .650 
   int contact;    //based on average, a 100 is around a .350 batting average
@@ -9,32 +14,14 @@ struct position_player_struct {
   int speed;      //based on stolen bases only, were 100 is around 60 SB
   int defensive_flexibility; //based on ammount of appearances at different positions, a 100 is like 6 or 7 positions
   int experience; //based on years played, a 100 is greater than 15 years
-}position;
-
-struct pitcher_struct {
-  int power;  //based on strikeouts, over 300 per is a 100
-  int control; //based on walks per 9 innings less than 2 is a 100
-  int durability; //based on innings pitched, more than 250 is a 100
-  struct pitch_info_struct *pitches;
-}pitcher;
-
-struct pitch_info_struct {
-  int speed;
-  int horizontal_movement;
-  int downwards_movement;
-}pitch;
-
-struct player_struct {
-  int bats;
-  int throws;
-  int defense;  //based on errors commited, around 25 errors is a 50
-  struct position *position_player_info;
-  struct pitcher *pitcher_info;
+  int durablility; //based on games played a year on average, 100 is 162
+  int pitching_power;
+  int pitching_control;
 }player;
 
 struct team_struct {
   char *name;
-  struct player *players;
+  struct player *players[26];
 }team;
 
 void search_player(menu_n *);
