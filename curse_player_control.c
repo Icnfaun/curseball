@@ -14,8 +14,7 @@
 /*
  * "select function" for the search button on the import player menu, mainly used to get the correct id to
  * show player statistics, won't work for any other page really unless you format the menu exactly
- * 
- * TODO use create_menu_node() instead of manually doing it. 
+ *  
  */
 void search_player(menu_n *current_node) {
   menu_n *last_node = current_node;
